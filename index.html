@@ -72,7 +72,6 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 🌟 보내주신 사진 속의 소중한 고유 정보들을 안전하게 대입해 두었습니다!
         const firebaseConfig = {
             apiKey: "AIzaSyAEiZ6juSz2mlBCbV16xjvfbFkU_5N-lY8",
             authDomain: "kuma-artgrid.firebaseapp.com",
@@ -87,6 +86,7 @@
         let db = null;
         let activeVideos = [];
         let isAdmin = false;
+        const ADMIN_PASS = '1213'; // 관리자 비밀번호 정의
 
         const init = async () => {
             try {
@@ -156,29 +156,40 @@
                 return;
             }
 
-            if(db) {
-                await addDoc(collection(db, 'videos'), { code, url });
-            } else {
-                activeVideos.push({ id: Date.now().toString(), code, url });
-                localStorage.setItem("kuma_artgrid_data", JSON.stringify(activeVideos));
-                render();
-            }
+            try {
+                if(db) {
+                    // 🌟 [수정 포인트] 보안 규칙 통과를 위해 데이터 저장 시 password: '1213'을 함께 전송합니다.
+                    await addDoc(collection(db, 'videos'), { code, url, password: ADMIN_PASS });
+                } else {
+                    activeVideos.push({ id: Date.now().toString(), code, url, password: ADMIN_PASS });
+                    localStorage.setItem("kuma_artgrid_data", JSON.stringify(activeVideos));
+                    render();
+                }
 
-            codeInput.value = "";
-            urlInput.value = "";
-            showToast("실시간 등록 완료!");
+                codeInput.value = "";
+                urlInput.value = "";
+                showToast("실시간 등록 완료!");
+            } catch (error) {
+                console.error("등록 실패:", error);
+                alert("영상 등록에 실패했습니다. 관리자 권한을 확인해 주세요.");
+            }
         };
 
         window.deleteVideo = async (id) => {
             if(!confirm("해당 영상을 정말 삭제하시겠습니까?")) return;
-            if(db) {
-                await deleteDoc(doc(db, 'videos', id));
-            } else {
-                activeVideos = activeVideos.filter(v => v.id !== id);
-                localStorage.setItem("kuma_artgrid_data", JSON.stringify(activeVideos));
-                render();
+            try {
+                if(db) {
+                    await deleteDoc(doc(db, 'videos', id));
+                } else {
+                    activeVideos = activeVideos.filter(v => v.id !== id);
+                    localStorage.setItem("kuma_artgrid_data", JSON.stringify(activeVideos));
+                    render();
+                }
+                showToast("영상이 삭제되었습니다.");
+            } catch (error) {
+                console.error("삭제 실패:", error);
+                alert("영상 삭제에 실패했습니다.");
             }
-            showToast("영상이 삭제되었습니다.");
         };
 
         window.openPasswordModal = () => {
@@ -196,7 +207,7 @@
 
         window.checkAdminPassword = () => {
             const inputPass = document.getElementById('modalPasswordInput').value;
-            if(inputPass === '1213') {
+            if(inputPass === ADMIN_PASS) {
                 isAdmin = true;
                 closePasswordModal();
                 render(document.getElementById('searchInput').value);
