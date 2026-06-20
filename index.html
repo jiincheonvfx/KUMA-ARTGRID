@@ -8,12 +8,11 @@
 <body class="bg-slate-50 p-4">
     <div class="max-w-xl mx-auto">
         <div id="adminPanel" class="hidden bg-white p-4 rounded-xl shadow-sm border mb-6">
-            <h2 class="text-xs font-bold mb-3 text-blue-500">엔터키로 업로드 가능</h2>
+            <h2 class="text-xs font-bold mb-3 text-blue-500">코드 입력 후 엔터 시 자동 저장</h2>
             <input type="hidden" id="editId">
             <div class="flex gap-2">
                 <input type="text" id="adminCode" placeholder="코드" class="w-1/3 border p-2 rounded">
                 <input type="text" id="adminUrl" placeholder="링크" class="flex-1 border p-2 rounded">
-                <button onclick="window.processUpload()" class="bg-blue-600 text-white px-4 rounded font-bold">저장</button>
             </div>
             <p id="statusMsg" class="text-[10px] mt-2 text-red-500"></p>
         </div>
@@ -33,6 +32,13 @@
         </div>
     </div>
 
+    <div id="passwordModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl w-full max-w-sm">
+            <input type="password" id="modalPasswordInput" class="border p-2 mb-4 w-full" placeholder="비밀번호">
+            <button onclick="window.checkPass()" class="w-full bg-black text-white py-2 rounded">인증</button>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -45,12 +51,25 @@
         const PATH = `artifacts/kuma-artgrid/public/data/videos`;
         let allVideos = [], isAdmin = false, currentPage = 1;
 
-        // [핵심 변경] 엔터키 입력 감지 로직
-        const handleEnter = (e) => {
-            if (e.key === 'Enter') window.processUpload();
-        };
+        // 엔터키 저장 로직
+        const handleEnter = (e) => { if (e.key === 'Enter') window.processUpload(); };
         document.getElementById('adminCode').addEventListener('keydown', handleEnter);
         document.getElementById('adminUrl').addEventListener('keydown', handleEnter);
+
+        // 관리자 모드 토글 (인증 여부 확인)
+        window.toggleAdminPanel = () => {
+            if(!isAdmin) document.getElementById('passwordModal').classList.remove('hidden');
+            else document.getElementById('adminPanel').classList.toggle('hidden');
+        };
+
+        window.checkPass = () => {
+            if(document.getElementById('modalPasswordInput').value === '1213') {
+                isAdmin = true;
+                document.getElementById('passwordModal').classList.add('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
+                window.render();
+            } else { alert("비밀번호 불일치"); }
+        };
 
         window.processUpload = async () => {
             const id = document.getElementById('editId').value;
@@ -59,11 +78,8 @@
 
             if(!code || !url) return alert("빈칸을 채워주세요.");
 
-            if(!id) {
-                if(allVideos.some(v => v.code === code)) {
-                    alert(`⚠️ 경고: [${code}] 코드는 이미 등록되어 있습니다!`);
-                    return;
-                }
+            if(!id && allVideos.some(v => v.code === code)) {
+                return alert(`⚠️ 경고: [${code}] 코드는 이미 등록되어 있습니다!`);
             }
 
             if(id) await updateDoc(doc(db, PATH, id), { code, url });
@@ -75,7 +91,7 @@
             alert("저장 완료!");
         };
 
-        // 렌더링 및 기타 로직 (이전과 동일)
+        // 렌더링 로직
         window.render = (filter = "") => {
             const tbody = document.getElementById('videoListContainer');
             const filtered = allVideos.filter(v => v.code.includes(filter))
@@ -98,7 +114,6 @@
         };
 
         window.goToPage = (p) => { currentPage = p; window.render(document.getElementById('searchInput').value); };
-        window.toggleAdminPanel = () => document.getElementById('adminPanel').classList.toggle('hidden');
         window.startEdit = (id, code, url) => {
             document.getElementById('editId').value = id;
             document.getElementById('adminCode').value = code;
@@ -114,6 +129,7 @@
         });
 
         document.getElementById('searchInput').oninput = (e) => { currentPage = 1; window.render(e.target.value); };
+        document.getElementById('modalPasswordInput').addEventListener('keydown', (e) => { if(e.key === 'Enter') window.checkPass(); });
     </script>
 </body>
 </html>
