@@ -1,76 +1,34 @@
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, doc, deleteDoc, updateDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>KUMA ARTGRID</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-10">
+    <h1 class="text-2xl font-bold">KUMA ARTGRID 실행 중...</h1>
+    <div id="status" class="mt-4 text-gray-600">연결 확인 중...</div>
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyDF0vZjBSt6RQmwP8smbXgtBaky3_5000g",
-        authDomain: "kuma-artgrid-d60b7.firebaseapp.com",
-        projectId: "kuma-artgrid-d60b7",
-        storageBucket: "kuma-artgrid-d60b7.firebasestorage.app",
-        messagingSenderId: "765555184972",
-        appId: "1:765555184972:web:54ece8610d381cb7c12be9"
-    };
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const appId = 'kuma-artgrid';
-    // 💡 경로를 변수로 명확히 정의하여 오류 방지
-    const VIDEO_COLLECTION = `artifacts/${appId}/public/data/videos`;
-    
-    let db = null;
-    let activeVideos = [];
-    let isAdmin = false;
+        const firebaseConfig = {
+            apiKey: "AIzaSyDF0vZjBSt6RQmwP8smbXgtBaky3_5000g",
+            authDomain: "kuma-artgrid-d60b7.firebaseapp.com",
+            projectId: "kuma-artgrid-d60b7",
+            storageBucket: "kuma-artgrid-d60b7.firebasestorage.app",
+            messagingSenderId: "765555184972",
+            appId: "1:765555184972:web:54ece8610d381cb7c12be9"
+        };
 
-    const init = async () => {
         try {
             const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            await signInAnonymously(getAuth(app));
-
-            document.getElementById('syncStatus').innerText = "온라인 실시간 동기화 중";
-            
-            // 정의된 경로로 데이터 구독
-            const q = query(collection(db, VIDEO_COLLECTION));
-            onSnapshot(q, (snapshot) => {
-                activeVideos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                render();
-            });
-        } catch (error) {
-            console.error("서버 연결 실패:", error);
-            document.getElementById('syncStatus').innerText = "서버 연결 오류";
-        }
-    };
-
-    // ... (중략: render 함수 등은 그대로 유지) ...
-
-    window.processUpload = async () => {
-        const code = document.getElementById('adminCode').value.trim();
-        const url = document.getElementById('adminUrl').value.trim();
-        const editId = document.getElementById('editTargetId').value;
-        
-        if(!code || !url) { alert("내용을 입력하세요."); return; }
-
-        try {
-            if(editId) {
-                await updateDoc(doc(db, VIDEO_COLLECTION, editId), { code, url });
-                showToast("수정 완료!");
-            } else {
-                await addDoc(collection(db, VIDEO_COLLECTION), { code, url });
-                showToast("등록 완료!");
-            }
-            resetAdminForm();
+            const db = getFirestore(app);
+            document.getElementById('status').innerText = "✅ 연결 성공! 정상 작동 중입니다.";
         } catch (e) {
-            console.error(e);
-            alert("등록 실패: 권한이나 경로를 확인하세요.");
+            document.getElementById('status').innerText = "❌ 오류 발생: " + e.message;
         }
-    };
-
-    window.deleteVideo = async (id) => {
-        if(!confirm("삭제할까요?")) return;
-        await deleteDoc(doc(db, VIDEO_COLLECTION, id));
-        showToast("삭제 완료!");
-    };
-    
-    // ... (나머지 함수 그대로 유지) ...
-
-    init();
-</script>
+    </script>
+</body>
+</html>
