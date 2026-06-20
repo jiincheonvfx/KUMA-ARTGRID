@@ -72,20 +72,20 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // 🌟 방금 화면에 뜬 진짜 수정한 새 주소값(kuma-artgrid-d60b7)을 적용했습니다!
         const firebaseConfig = {
-            apiKey: "AIzaSyAEiZ6juSz2mlBCbV16xjvfbFkU_5N-lY8",
-            authDomain: "kuma-artgrid.firebaseapp.com",
-            projectId: "kuma-artgrid",
-            storageBucket: "kuma-artgrid.firebasestorage.app",
-            messagingSenderId: "470387898943",
-            appId: "1:470387898943:web:15b476776d124f54f9168a",
-            measurementId: "G-94HL20Z884"
+            apiKey: "AIzaSyDF0vZjBSt6RQmwP8smbXgtBaky3_5000g",
+            authDomain: "kuma-artgrid-d60b7.firebaseapp.com",
+            projectId: "kuma-artgrid-d60b7",
+            storageBucket: "kuma-artgrid-d60b7.firebasestorage.app",
+            messagingSenderId: "765555184972",
+            appId: "1:765555184972:web:54ece8610d381cb7c12be9"
         };
 
         let db = null;
         let activeVideos = [];
         let isAdmin = false;
-        const ADMIN_PASS = '1213'; // 관리자 비밀번호 정의
+        const ADMIN_PASS = '1213';
 
         const init = async () => {
             try {
@@ -93,21 +93,21 @@
                 const auth = getAuth(app);
                 db = getFirestore(app);
                 
+                // 익명 로그인
                 await signInAnonymously(auth);
-
-                document.getElementById('syncStatus').innerText = "온라인 동기화 중";
                 
                 const q = query(collection(db, 'videos'));
-                
                 onSnapshot(q, (snapshot) => {
+                    document.getElementById('syncStatus').innerText = "온라인 동기화 중";
+                    document.getElementById('syncStatus').className = "text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg";
                     activeVideos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     render(document.getElementById('searchInput').value);
                 }, (error) => {
-                    console.error("Firestore 로드 에러:", error);
+                    console.error("Firestore 연결 실패:", error);
                     fallbackToLocal();
                 });
             } catch(e) {
-                console.error("초기화 실패:", e);
+                console.error("인증 실패:", e);
                 fallbackToLocal();
             }
         };
@@ -115,6 +115,7 @@
         const fallbackToLocal = () => {
             activeVideos = JSON.parse(localStorage.getItem("kuma_artgrid_data") || '[]');
             document.getElementById('syncStatus').innerText = "오프라인 로컬 모드";
+            document.getElementById('syncStatus').className = "text-xs font-medium text-amber-600 bg-amber-50 px-3 py-1 rounded-lg";
             render();
         };
 
@@ -124,7 +125,6 @@
             container.innerHTML = "";
             
             const filtered = activeVideos.filter(v => String(v.code).includes(filter));
-            
             filtered.sort((a, b) => String(a.code).localeCompare(String(b.code), undefined, {numeric: true}));
 
             if(filtered.length === 0) noData.classList.remove('hidden');
@@ -157,7 +157,6 @@
 
             try {
                 if(db) {
-                    // 🌟 [수정 포인트] 보안 규칙 통과를 위해 데이터 저장 시 password: '1213'을 함께 전송합니다.
                     await addDoc(collection(db, 'videos'), { code, url, password: ADMIN_PASS });
                 } else {
                     activeVideos.push({ id: Date.now().toString(), code, url, password: ADMIN_PASS });
@@ -170,7 +169,7 @@
                 showToast("실시간 등록 완료!");
             } catch (error) {
                 console.error("등록 실패:", error);
-                alert("영상 등록에 실패했습니다. 관리자 권한을 확인해 주세요.");
+                alert("영상 등록 실패! 파이어베이스의 Rules(규칙) 설정을 확인해 주세요.");
             }
         };
 
