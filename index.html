@@ -4,43 +4,38 @@
     <meta charset="UTF-8">
     <title>KUMA ARTGRID</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-slate-50 p-4">
     <div class="max-w-xl mx-auto">
-        <h1 class="text-xl font-bold mb-6">KUMA ARTGRID</h1>
-        
-        <input type="text" id="searchInput" placeholder="코드 번호 검색" 
-               class="w-full border p-3 rounded-xl mb-4 shadow-sm outline-none">
-        
-        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-slate-100 text-slate-600 text-sm">
-                        <th class="p-3">코드</th>
-                        <th class="p-3 text-right">관리</th>
-                    </tr>
-                </thead>
-                <tbody id="videoListContainer" class="divide-y divide-slate-100">
-                    </tbody>
-            </table>
+        <div id="adminPanel" class="hidden bg-white p-4 rounded-xl shadow-sm border mb-6">
+            <h2 class="text-xs font-bold mb-3 text-slate-400">관리자 도구</h2>
+            <input type="hidden" id="editId">
+            <div class="flex gap-2">
+                <input type="text" id="adminCode" placeholder="코드" class="w-1/3 border p-2 rounded">
+                <input type="text" id="adminUrl" placeholder="링크" class="flex-1 border p-2 rounded">
+                <button onclick="window.processUpload()" class="bg-blue-600 text-white px-4 rounded">저장</button>
+            </div>
         </div>
 
-        <div class="mt-8 border-t pt-8">
-            <button onclick="window.toggleAdminPanel()" class="text-xs text-gray-400 block mx-auto">관리자 도구</button>
-            <div id="adminPanel" class="hidden mt-4 bg-white p-6 rounded-xl shadow-sm border">
-                <input type="hidden" id="editId">
-                <input type="text" id="adminCode" placeholder="영상 코드" class="w-full border p-2 mb-2 rounded">
-                <input type="text" id="adminUrl" placeholder="링크 주소" class="w-full border p-2 mb-4 rounded">
-                <button id="submitBtn" onclick="window.processUpload()" class="w-full bg-blue-600 text-white py-2 rounded">저장</button>
-            </div>
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-bold">KUMA ARTGRID</h1>
+            <button onclick="window.toggleAdminPanel()" class="text-[10px] text-slate-400 border px-2 py-1 rounded">관리자 모드</button>
+        </div>
+
+        <input type="text" id="searchInput" placeholder="코드 검색" class="w-full border p-3 rounded-xl mb-4 shadow-sm">
+        
+        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+            <table class="w-full text-left">
+                <tbody id="videoListContainer" class="divide-y divide-slate-100"></tbody>
+            </table>
+            <div id="pagination" class="flex justify-center gap-2 p-4 border-t"></div>
         </div>
     </div>
 
     <div id="passwordModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-xl w-full max-w-sm">
-            <input type="password" id="modalPasswordInput" placeholder="비밀번호" class="border p-2 mb-4 w-full">
-            <button onclick="window.checkPass()" class="w-full bg-black text-white py-2">인증 확인</button>
+        <div class="bg-white p-6 rounded-xl w-full max-w-sm">
+            <input type="password" id="modalPasswordInput" class="border p-2 mb-4 w-full" placeholder="비밀번호">
+            <button onclick="window.checkPass()" class="w-full bg-black text-white py-2 rounded">인증</button>
         </div>
     </div>
 
@@ -51,42 +46,42 @@
 
         const db = getFirestore(initializeApp({
             apiKey: "AIzaSyDF0vZjBSt6RQmwP8smbXgtBaky3_5000g",
-            projectId: "kuma-artgrid-d60b7",
-            // ... (동일한 설정)
+            projectId: "kuma-artgrid-d60b7"
         }));
         const PATH = `artifacts/kuma-artgrid/public/data/videos`;
-        let isAdmin = false, allVideos = [];
+        let allVideos = [], isAdmin = false, currentPage = 1;
 
         window.render = (filter = "") => {
             const tbody = document.getElementById('videoListContainer');
-            const filtered = allVideos
-                .filter(v => v.code.includes(filter))
-                .sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true}));
+            const filtered = allVideos.filter(v => v.code.includes(filter))
+                                     .sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true}));
+            
+            const start = (currentPage - 1) * 10;
+            const pageData = filtered.slice(start, start + 10);
 
-            tbody.innerHTML = filtered.map(d => `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="p-3 font-bold text-slate-800">${d.code}</td>
-                    <td class="p-3 text-right">
-                        ${isAdmin ? `<button onclick="window.startEdit('${d.id}', '${d.code}', '${d.url}')" class="text-xs text-blue-500 mr-3">수정</button>` : ''}
-                        <a href="${d.url}" target="_blank" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-medium">열기</a>
+            tbody.innerHTML = pageData.map(d => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4">
+                        <a href="${d.url}" target="_blank" class="font-bold text-blue-600 hover:underline">${d.code}</a>
+                    </td>
+                    <td class="p-4 text-right">
+                        ${isAdmin ? `<button onclick="window.startEdit('${d.id}','${d.code}','${d.url}')" class="text-[10px] text-slate-400">수정</button>` : ''}
                     </td>
                 </tr>
             `).join('');
+
+            // 페이지 버튼 생성
+            const totalPages = Math.ceil(filtered.length / 10);
+            document.getElementById('pagination').innerHTML = Array.from({length: totalPages}, (_, i) => 
+                `<button onclick="window.goToPage(${i+1})" class="px-2 py-1 text-xs border rounded ${currentPage === i+1 ? 'bg-black text-white' : ''}">${i+1}</button>`
+            ).join('');
         };
 
-        // Firebase 연결 및 이벤트는 이전 코드와 동일하게 유지
-        signInAnonymously(getAuth()).then(() => {
-            onSnapshot(query(collection(db, PATH)), (snap) => {
-                allVideos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                window.render(document.getElementById('searchInput').value);
-            });
-        });
-
+        window.goToPage = (p) => { currentPage = p; window.render(document.getElementById('searchInput').value); };
         window.toggleAdminPanel = () => {
             if(!isAdmin) document.getElementById('passwordModal').classList.remove('hidden');
             else document.getElementById('adminPanel').classList.toggle('hidden');
         };
-
         window.checkPass = () => {
             if(document.getElementById('modalPasswordInput').value === '1213') {
                 isAdmin = true;
@@ -95,24 +90,28 @@
                 window.render();
             }
         };
-
         window.processUpload = async () => {
             const id = document.getElementById('editId').value;
             const code = document.getElementById('adminCode').value;
             const url = document.getElementById('adminUrl').value;
             if(id) await updateDoc(doc(db, PATH, id), { code, url });
             else await addDoc(collection(db, PATH), { code, url });
-            alert("완료!");
+            alert("저장 완료");
         };
-
         window.startEdit = (id, code, url) => {
             document.getElementById('editId').value = id;
             document.getElementById('adminCode').value = code;
             document.getElementById('adminUrl').value = url;
-            document.getElementById('adminPanel').classList.remove('hidden');
         };
 
-        document.getElementById('searchInput').oninput = (e) => window.render(e.target.value);
+        signInAnonymously(getAuth()).then(() => {
+            onSnapshot(query(collection(db, PATH)), (snap) => {
+                allVideos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                window.render();
+            });
+        });
+
+        document.getElementById('searchInput').oninput = (e) => { currentPage = 1; window.render(e.target.value); };
     </script>
 </body>
 </html>
