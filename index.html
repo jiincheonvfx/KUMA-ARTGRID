@@ -232,9 +232,6 @@
                 });
 
                 activeVideos = list;
-
-                // RULE 2 - Firestore 복잡 쿼리 배제, 정렬은 항상 인메모리(자바스크립트)에서 진행
-                activeVideos.sort((a, b) => b.code.localeCompare(a.code, undefined, {numeric: true, sensitivity: 'base'}));
                 
                 renderVideos();
                 updateStats();
@@ -256,8 +253,15 @@
             if (!container) return;
             container.innerHTML = "";
             
+            // 🛡️ [정렬 개선] 영상 코드를 확실하게 문자열로 변환한 후 빈칸을 제거하고 완벽하게 내림차순(최신순) 정렬합니다.
+            activeVideos.sort((a, b) => {
+                const codeA = String(a.code || '').trim();
+                const codeB = String(b.code || '').trim();
+                return codeB.localeCompare(codeA, undefined, {numeric: true, sensitivity: 'base'});
+            });
+            
             const filtered = activeVideos.filter(video => 
-                video.code.toLowerCase().includes(filterText.toLowerCase())
+                String(video.code || '').toLowerCase().includes(filterText.toLowerCase())
             );
 
             if (filtered.length === 0) {
@@ -312,6 +316,7 @@
                 totalCountEl.innerText = `${activeVideos.length}개`;
             }
             if (latestCodeEl) {
+                // 이미 정렬이 완료된 상태이므로 첫 번째 요소를 가져옵니다.
                 latestCodeEl.innerText = activeVideos.length > 0 ? activeVideos[0].code : '-';
             }
         };
@@ -347,7 +352,7 @@
             }
         };
 
-        // 클립보드 복사 유틸リティ
+        // 클립보드 복사 유틸리티
         window.copyToClipboard = (text) => {
             const tempInput = document.getElementById('fallbackCopyInput');
             if (!tempInput) return;
@@ -395,7 +400,6 @@
                 // 데모 모드 (백업 모드 작동 시)
                 localFallbackVideos.push({ id: `local-${Date.now()}`, code, url });
                 activeVideos = [...localFallbackVideos];
-                activeVideos.sort((a, b) => b.code.localeCompare(a.code, undefined, {numeric: true, sensitivity: 'base'}));
                 renderVideos();
                 updateStats();
                 codeInput.value = "";
