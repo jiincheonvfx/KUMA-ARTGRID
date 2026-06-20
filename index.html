@@ -9,6 +9,10 @@
 <body class="bg-slate-50 p-6">
     <div class="max-w-xl mx-auto">
         <h1 class="text-xl font-bold mb-6">KUMA ARTGRID</h1>
+        
+        <input type="text" id="searchInput" placeholder="코드 번호로 검색 (예: 60412)" 
+               class="w-full border p-3 rounded-xl mb-6 shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
+        
         <div id="videoListContainer" class="space-y-3 mb-10"></div>
 
         <div class="border-t pt-10">
@@ -32,16 +36,51 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         const db = getFirestore(initializeApp({
             apiKey: "AIzaSyDF0vZjBSt6RQmwP8smbXgtBaky3_5000g",
+            authDomain: "kuma-artgrid-d60b7.firebaseapp.com",
             projectId: "kuma-artgrid-d60b7",
-            // ... (나머지 정보는 이전과 동일)
+            storageBucket: "kuma-artgrid-d60b7.firebasestorage.app",
+            messagingSenderId: "765555184972",
+            appId: "1:765555184972:web:54ece8610d381cb7c12be9"
         }));
+
         const PATH = `artifacts/kuma-artgrid/public/data/videos`;
         let isAdmin = false;
+        let allVideos = [];
 
-        // 전역 함수 노출
+        // 렌더링 함수 (검색 필터 + 오름차순 정렬)
+        window.render = (filter = "") => {
+            const list = document.getElementById('videoListContainer');
+            const filtered = allVideos
+                .filter(v => v.code.includes(filter))
+                .sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true})); // 코드 번호 오름차순 정렬
+
+            list.innerHTML = filtered.map(d => `
+                <div class="bg-white p-4 rounded border flex justify-between items-center shadow-sm">
+                    <div><b class="text-lg">${d.code}</b></div>
+                    <div class="flex gap-2">
+                        ${isAdmin ? `<button onclick="window.startEdit('${d.id}', '${d.code}', '${d.url}')" class="text-xs text-blue-500 font-bold">수정</button>` : ''}
+                        <a href="${d.url}" target="_blank" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium">다운로드</a>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        // 실시간 데이터 수신
+        signInAnonymously(getAuth()).then(() => {
+            onSnapshot(query(collection(db, PATH)), (snap) => {
+                allVideos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                window.render(document.getElementById('searchInput').value);
+            });
+        });
+
+        // 검색 이벤트
+        document.getElementById('searchInput').oninput = (e) => window.render(e.target.value);
+
+        // 관리자 관련 함수들
         window.toggleAdminPanel = () => {
             if(!isAdmin) document.getElementById('passwordModal').classList.remove('hidden');
             else document.getElementById('adminPanel').classList.toggle('hidden');
@@ -60,14 +99,11 @@
             const id = document.getElementById('editId').value;
             const code = document.getElementById('adminCode').value;
             const url = document.getElementById('adminUrl').value;
-            
-            if(id) {
-                await updateDoc(doc(db, PATH, id), { code, url });
-                alert("수정 완료!");
-            } else {
-                await addDoc(collection(db, PATH), { code, url });
-                alert("등록 완료!");
-            }
+            if(id) await updateDoc(doc(db, PATH, id), { code, url });
+            else await addDoc(collection(db, PATH), { code, url });
+            alert("처리 완료!");
+            document.getElementById('adminCode').value = "";
+            document.getElementById('adminUrl').value = "";
             document.getElementById('editId').value = "";
         };
 
@@ -76,21 +112,7 @@
             document.getElementById('adminCode').value = code;
             document.getElementById('adminUrl').value = url;
             document.getElementById('adminPanel').classList.remove('hidden');
-            document.getElementById('submitBtn').innerText = "수정하기";
         };
-
-        onSnapshot(query(collection(db, PATH)), (snap) => {
-            const list = document.getElementById('videoListContainer');
-            list.innerHTML = snap.docs.map(d => `
-                <div class="bg-white p-4 rounded border flex justify-between">
-                    <div><b>${d.data().code}</b></div>
-                    <div class="flex gap-2">
-                        ${isAdmin ? `<button onclick="window.startEdit('${d.id}', '${d.data().code}', '${d.data().url}')" class="text-xs text-blue-500">수정</button>` : ''}
-                        <a href="${d.data().url}" target="_blank" class="text-blue-600">다운로드</a>
-                    </div>
-                </div>
-            `).join('');
-        });
     </script>
 </body>
 </html>
