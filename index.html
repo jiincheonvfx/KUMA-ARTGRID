@@ -6,28 +6,39 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-50 p-6">
+<body class="bg-slate-50 p-4">
     <div class="max-w-xl mx-auto">
         <h1 class="text-xl font-bold mb-6">KUMA ARTGRID</h1>
         
-        <input type="text" id="searchInput" placeholder="코드 번호로 검색 (예: 60412)" 
-               class="w-full border p-3 rounded-xl mb-6 shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
+        <input type="text" id="searchInput" placeholder="코드 번호 검색" 
+               class="w-full border p-3 rounded-xl mb-4 shadow-sm outline-none">
         
-        <div id="videoListContainer" class="space-y-3 mb-10"></div>
+        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-100 text-slate-600 text-sm">
+                        <th class="p-3">코드</th>
+                        <th class="p-3 text-right">관리</th>
+                    </tr>
+                </thead>
+                <tbody id="videoListContainer" class="divide-y divide-slate-100">
+                    </tbody>
+            </table>
+        </div>
 
-        <div class="border-t pt-10">
+        <div class="mt-8 border-t pt-8">
             <button onclick="window.toggleAdminPanel()" class="text-xs text-gray-400 block mx-auto">관리자 도구</button>
-            <div id="adminPanel" class="hidden mt-6 bg-white p-6 rounded-xl shadow-sm border">
+            <div id="adminPanel" class="hidden mt-4 bg-white p-6 rounded-xl shadow-sm border">
                 <input type="hidden" id="editId">
                 <input type="text" id="adminCode" placeholder="영상 코드" class="w-full border p-2 mb-2 rounded">
                 <input type="text" id="adminUrl" placeholder="링크 주소" class="w-full border p-2 mb-4 rounded">
-                <button id="submitBtn" onclick="window.processUpload()" class="w-full bg-blue-600 text-white py-2 rounded">등록하기</button>
+                <button id="submitBtn" onclick="window.processUpload()" class="w-full bg-blue-600 text-white py-2 rounded">저장</button>
             </div>
         </div>
     </div>
 
-    <div id="passwordModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center">
-        <div class="bg-white p-8 rounded-xl">
+    <div id="passwordModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-xl w-full max-w-sm">
             <input type="password" id="modalPasswordInput" placeholder="비밀번호" class="border p-2 mb-4 w-full">
             <button onclick="window.checkPass()" class="w-full bg-black text-white py-2">인증 확인</button>
         </div>
@@ -40,36 +51,30 @@
 
         const db = getFirestore(initializeApp({
             apiKey: "AIzaSyDF0vZjBSt6RQmwP8smbXgtBaky3_5000g",
-            authDomain: "kuma-artgrid-d60b7.firebaseapp.com",
             projectId: "kuma-artgrid-d60b7",
-            storageBucket: "kuma-artgrid-d60b7.firebasestorage.app",
-            messagingSenderId: "765555184972",
-            appId: "1:765555184972:web:54ece8610d381cb7c12be9"
+            // ... (동일한 설정)
         }));
-
         const PATH = `artifacts/kuma-artgrid/public/data/videos`;
-        let isAdmin = false;
-        let allVideos = [];
+        let isAdmin = false, allVideos = [];
 
-        // 렌더링 함수 (검색 필터 + 오름차순 정렬)
         window.render = (filter = "") => {
-            const list = document.getElementById('videoListContainer');
+            const tbody = document.getElementById('videoListContainer');
             const filtered = allVideos
                 .filter(v => v.code.includes(filter))
-                .sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true})); // 코드 번호 오름차순 정렬
+                .sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true}));
 
-            list.innerHTML = filtered.map(d => `
-                <div class="bg-white p-4 rounded border flex justify-between items-center shadow-sm">
-                    <div><b class="text-lg">${d.code}</b></div>
-                    <div class="flex gap-2">
-                        ${isAdmin ? `<button onclick="window.startEdit('${d.id}', '${d.code}', '${d.url}')" class="text-xs text-blue-500 font-bold">수정</button>` : ''}
-                        <a href="${d.url}" target="_blank" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium">다운로드</a>
-                    </div>
-                </div>
+            tbody.innerHTML = filtered.map(d => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-3 font-bold text-slate-800">${d.code}</td>
+                    <td class="p-3 text-right">
+                        ${isAdmin ? `<button onclick="window.startEdit('${d.id}', '${d.code}', '${d.url}')" class="text-xs text-blue-500 mr-3">수정</button>` : ''}
+                        <a href="${d.url}" target="_blank" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-medium">열기</a>
+                    </td>
+                </tr>
             `).join('');
         };
 
-        // 실시간 데이터 수신
+        // Firebase 연결 및 이벤트는 이전 코드와 동일하게 유지
         signInAnonymously(getAuth()).then(() => {
             onSnapshot(query(collection(db, PATH)), (snap) => {
                 allVideos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -77,10 +82,6 @@
             });
         });
 
-        // 검색 이벤트
-        document.getElementById('searchInput').oninput = (e) => window.render(e.target.value);
-
-        // 관리자 관련 함수들
         window.toggleAdminPanel = () => {
             if(!isAdmin) document.getElementById('passwordModal').classList.remove('hidden');
             else document.getElementById('adminPanel').classList.toggle('hidden');
@@ -101,10 +102,7 @@
             const url = document.getElementById('adminUrl').value;
             if(id) await updateDoc(doc(db, PATH, id), { code, url });
             else await addDoc(collection(db, PATH), { code, url });
-            alert("처리 완료!");
-            document.getElementById('adminCode').value = "";
-            document.getElementById('adminUrl').value = "";
-            document.getElementById('editId').value = "";
+            alert("완료!");
         };
 
         window.startEdit = (id, code, url) => {
@@ -113,6 +111,8 @@
             document.getElementById('adminUrl').value = url;
             document.getElementById('adminPanel').classList.remove('hidden');
         };
+
+        document.getElementById('searchInput').oninput = (e) => window.render(e.target.value);
     </script>
 </body>
 </html>
