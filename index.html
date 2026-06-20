@@ -2,37 +2,54 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KUMA ARTGRID</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', 'Noto Sans KR', sans-serif; background-color: #f8fafc; }
+        .premium-card { background: #ffffff; border: 1px solid #e2e8f0; }
+        .animate-fade-in { animation: slideUp 0.25s ease-out forwards; }
+        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
 </head>
-<body class="bg-slate-50 p-6">
-    <div class="max-w-xl mx-auto">
-        <h1 class="text-xl font-bold mb-6">KUMA ARTGRID</h1>
-        
-        <div id="videoListContainer" class="space-y-3 mb-10"></div>
+<body class="min-h-screen pb-16">
 
-        <div class="border-t pt-10">
-            <button onclick="window.openPasswordModal()" class="text-xs text-gray-400 block mx-auto">관리자 도구 열기</button>
-            <div id="adminPanel" class="hidden mt-6 bg-white p-6 rounded-xl shadow-sm border">
-                <input type="text" id="adminCode" placeholder="코드" class="w-full border p-2 mb-2 rounded">
-                <input type="text" id="adminUrl" placeholder="URL" class="w-full border p-2 mb-4 rounded">
-                <button onclick="window.processUpload()" class="w-full bg-blue-600 text-white py-2 rounded">등록하기</button>
+    <header class="border-b bg-white/80 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+            <h1 class="font-bold text-slate-900">KUMA ARTGRID</h1>
+            <div id="syncStatus" class="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">온라인 연결 중...</div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 mt-8">
+        <input type="text" id="searchInput" placeholder="코드 검색" class="w-full border rounded-xl px-4 py-3 mb-6 outline-none">
+        <div class="space-y-3" id="videoListContainer"></div>
+        
+        <div class="mt-12 border-t pt-8">
+            <button onclick="window.openPasswordModal()" class="text-xs text-slate-400 block mx-auto">관리자 도구 <i class="fa-solid fa-lock"></i></button>
+            <div id="adminPanel" class="hidden mt-4 bg-white p-6 rounded-2xl border shadow-sm">
+                <input type="text" id="adminCode" placeholder="영상 코드" class="w-full mb-3 border rounded-lg px-3 py-2">
+                <input type="text" id="adminUrl" placeholder="링크 주소" class="w-full mb-3 border rounded-lg px-3 py-2">
+                <button id="submitBtn" onclick="window.processUpload()" class="w-full bg-slate-800 text-white py-2 rounded-lg">등록하기</button>
             </div>
         </div>
-    </div>
+    </main>
 
-    <div id="passwordModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center">
-        <div class="bg-white p-8 rounded-xl">
-            <input type="password" id="modalPasswordInput" placeholder="비밀번호" class="border p-2 mb-4 w-full">
-            <button onclick="window.verifyAdminPassword()" class="w-full bg-black text-white py-2">인증 확인</button>
+    <div id="passwordModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-2xl w-80 shadow-2xl">
+            <input type="password" id="modalPasswordInput" class="w-full border rounded-xl py-3 mb-4 text-center" placeholder="비밀번호">
+            <div class="flex gap-2">
+                <button onclick="window.closePasswordModal()" class="flex-1 bg-slate-100 py-2 rounded-xl">취소</button>
+                <button onclick="window.verifyAdminPassword()" class="flex-1 bg-slate-800 text-white py-2 rounded-xl">인증</button>
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, doc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDF0vZjBSt6RQmwP8smbXgtBaky3_5000g",
@@ -47,8 +64,8 @@
         const db = getFirestore(app);
         const PATH = `artifacts/kuma-artgrid/public/data/videos`;
         let activeVideos = [];
+        let isAdmin = false;
 
-        // 1. 초기화
         signInAnonymously(getAuth(app)).then(() => {
             onSnapshot(query(collection(db, PATH)), (snapshot) => {
                 activeVideos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -56,33 +73,54 @@
             });
         });
 
-        // 2. 렌더링
-        window.render = () => {
+        window.render = (filter = "") => {
             const container = document.getElementById('videoListContainer');
-            container.innerHTML = activeVideos.map(v => `
-                <div class="bg-white p-4 rounded border flex justify-between">
-                    <b>${v.code}</b>
-                    <a href="${v.url}" target="_blank" class="text-blue-600">다운로드</a>
-                </div>
-            `).join('');
+            container.innerHTML = "";
+            activeVideos.filter(v => v.code.includes(filter)).forEach(v => {
+                const div = document.createElement('div');
+                div.className = "premium-card p-4 rounded-2xl flex justify-between items-center";
+                div.innerHTML = `
+                    <h4 class="font-bold">${v.code}</h4>
+                    <div class="flex gap-2">
+                        ${isAdmin ? `<button onclick="window.deleteVideo('${v.id}')" class="text-red-500 text-xs">삭제</button>` : ''}
+                        <a href="${v.url}" target="_blank" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm">다운로드</a>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
         };
 
-        // 3. 관리자 함수 강제 노출
-        window.openPasswordModal = () => document.getElementById('passwordModal').classList.remove('hidden');
-        
+        window.openPasswordModal = () => {
+            if(isAdmin) document.getElementById('adminPanel').classList.toggle('hidden');
+            else document.getElementById('passwordModal').classList.remove('hidden');
+        };
+
+        window.closePasswordModal = () => document.getElementById('passwordModal').classList.add('hidden');
+
         window.verifyAdminPassword = () => {
             if(document.getElementById('modalPasswordInput').value === '1213') {
-                document.getElementById('passwordModal').classList.add('hidden');
+                isAdmin = true;
+                window.closePasswordModal();
                 document.getElementById('adminPanel').classList.remove('hidden');
-            } else { alert("비밀번호 틀림"); }
+                window.render();
+            } else { alert("비밀번호 불일치"); }
         };
 
         window.processUpload = async () => {
             const code = document.getElementById('adminCode').value;
             const url = document.getElementById('adminUrl').value;
+            if(!code || !url) return alert("입력하세요");
             await addDoc(collection(db, PATH), { code, url });
-            alert("등록 성공!");
+            alert("등록 완료!");
+            document.getElementById('adminCode').value = "";
+            document.getElementById('adminUrl').value = "";
         };
+
+        window.deleteVideo = async (id) => {
+            await deleteDoc(doc(db, PATH, id));
+        };
+
+        document.getElementById('searchInput').oninput = (e) => window.render(e.target.value);
     </script>
 </body>
 </html>
