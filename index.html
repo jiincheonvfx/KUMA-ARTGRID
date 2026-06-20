@@ -46,25 +46,25 @@
                 영상 관리 도구 <i class="fa-solid fa-lock ml-1"></i>
             </button>
             
-            <!-- 업로드 및 수정 양식 (인증 후 표시됨) -->
+            <!-- 업로드 및 수정 양식 (관리자 인증 후 표시됨) -->
             <div id="adminPanel" class="hidden mt-4 premium-card p-6 rounded-2xl animate-fade-in">
                 <h3 id="panelTitle" class="text-sm font-bold text-slate-800 mb-3"><i class="fa-solid fa-plus mr-1"></i> 새 영상 등록</h3>
                 <input type="hidden" id="editTargetId">
                 <input type="text" id="adminCode" placeholder="영상 코드 (예: 60412)" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-400">
-                <input type="text" id="adminUrl" placeholder="영상 다운로드 링크 또는 구글 드라이브 주소" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-400">
+                <input type="text" id="adminUrl" placeholder="영상 링크 주소 입력" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-400">
                 <div class="flex gap-2">
                     <button id="submitBtn" onclick="processUpload()" class="flex-1 bg-slate-800 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition">등록하기</button>
-                    <button id="cancelEditBtn" onclick="resetAdminForm()" class="hidden bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-300 transition">취소</button>
+                    <button id="cancelEditBtn" onclick="resetAdminForm()" class="hidden bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-300 transition">수정 취소</button>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- 비밀번호 입력 커스텀 모달 (●●●● 처리 및 노출 방지) -->
+    <!-- 비밀번호 입력 모달 (비밀번호 노출 방지) -->
     <div id="passwordModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-80 animate-fade-in border border-slate-100">
             <h3 class="font-bold text-slate-900 mb-2 text-center">관리자 인증</h3>
-            <p class="text-xs text-slate-400 text-center mb-4">비밀번호를 입력하세요.</p>
+            <p class="text-xs text-slate-400 text-center mb-4">수정 및 업로드를 위해 비밀번호를 입력하세요.</p>
             <input type="password" id="modalPasswordInput" class="w-full text-center tracking-widest bg-slate-50 border border-slate-200 rounded-xl py-3 mb-4 outline-none focus:ring-2 focus:ring-slate-500/20 text-lg font-bold" placeholder="••••">
             <div class="flex gap-2">
                 <button onclick="closePasswordModal()" class="flex-1 bg-slate-100 text-slate-500 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-200">취소</button>
@@ -141,38 +141,25 @@
                 const div = document.createElement('div');
                 div.className = "premium-card p-4 rounded-2xl flex justify-between items-center animate-fade-in";
                 
-                // 🔒 계정 제한 파일 보안 우회 처리 로직
-                // 무조건 정식 미리보기 뷰어(view) 주소로 가공하여 접속자의 구글 로그인 세션 및 권한 체크 과정을 정상 작동시킵니다.
-                let processedUrl = v.url;
-                if (v.url.includes('drive.google.com')) {
-                    if (v.url.includes('/uc?') || v.url.includes('export=download')) {
-                        // 만약 기존에 다운로드 전용 주소(uc)로 올렸던 데이터가 있다면 이를 다시 공식 뷰어 주소로 정상화합니다.
-                        const urlParams = new URLSearchParams(v.url.split('?')[1]);
-                        const fileId = urlParams.get('id');
-                        if (fileId) {
-                            processedUrl = `https://drive.google.com/file/d/${fileId}/view`;
-                        }
-                    } else if (v.url.includes('/view')) {
-                        // 이미 표준 미리보기 형태라면 그대로 유지하여 안정적인 연동을 보장합니다.
-                        processedUrl = v.url;
-                    }
-                }
-
+                // isAdmin(관리자 로그인 상태)일 때만 [수정], [삭제] 버튼이 노출됩니다.
+                // 구글 링크 강제 변환 로직 삭제 -> v.url 원본 그대로 연결되게 하여 접근 권한 오류 해결
                 div.innerHTML = `
-                    <div><h4 class="font-bold text-slate-800">${v.code}</h4></div>
-                    <div class="flex gap-1">
+                    <div><h4 class="font-bold text-slate-800 text-lg">${v.code}</h4></div>
+                    <div class="flex gap-2 items-center">
                         ${isAdmin ? `
-                            <button onclick="startEditVideo('${v.id}', '${v.code}', '${v.url}')" class="text-slate-400 hover:text-blue-500 px-2 transition"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button onclick="deleteVideo('${v.id}')" class="text-slate-400 hover:text-red-500 px-2 mr-1 transition"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="startEditVideo('${v.id}', '${v.code}', '${v.url}')" class="text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition"><i class="fa-solid fa-pen-to-square mr-1"></i> 수정</button>
+                            <button onclick="deleteVideo('${v.id}')" class="text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition mr-2"><i class="fa-solid fa-trash mr-1"></i> 삭제</button>
                         ` : ''}
-                        <a href="${processedUrl}" target="_blank" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition">다운로드</a>
+                        <a href="${v.url}" target="_blank" class="bg-slate-800 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition shadow-sm">
+                            <i class="fa-solid fa-download mr-1"></i> 다운로드
+                        </a>
                     </div>
                 `;
                 container.appendChild(div);
             });
         };
 
-        // 업로드 및 수정 처리 총괄 함수
+        // 업로드 및 수정 처리 함수
         window.processUpload = async () => {
             const codeInput = document.getElementById('adminCode');
             const urlInput = document.getElementById('adminUrl');
@@ -187,7 +174,7 @@
             }
 
             if(editId) {
-                // [수정 기능 수행]
+                // 수정 기능 (Firebase updateDoc)
                 if(db) {
                     await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'videos', editId), { code, url });
                 } else {
@@ -198,7 +185,7 @@
                 }
                 showToast("수정이 완료되었습니다!");
             } else {
-                // [새 영상 등록 기능 수행]
+                // 새 업로드 기능
                 if(db) {
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'videos'), { code, url });
                 } else {
@@ -211,19 +198,22 @@
             resetAdminForm();
         };
 
-        // 수정 탭 폼 활성화 데이터 세팅
+        // 수정 버튼 클릭 시 폼에 데이터를 채우는 함수
         window.startEditVideo = (id, code, url) => {
             document.getElementById('panelTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-blue-500 mr-1"></i> 영상 정보 수정 중...`;
             document.getElementById('editTargetId').value = id;
             document.getElementById('adminCode').value = code;
             document.getElementById('adminUrl').value = url;
-            document.getElementById('submitBtn').innerText = "수정 완료";
+            document.getElementById('submitBtn').innerHTML = "<i class='fa-solid fa-check mr-1'></i> 수정 완료";
             document.getElementById('submitBtn').className = "flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition";
             document.getElementById('cancelEditBtn').classList.remove('hidden');
+            
+            // 관리자 패널로 시야 이동 및 포커스
+            document.getElementById('adminPanel').scrollIntoView({ behavior: 'smooth' });
             document.getElementById('adminCode').focus();
         };
 
-        // 양식 초기화 및 일반 등록 상태로 복원
+        // 폼 초기화 함수
         window.resetAdminForm = () => {
             document.getElementById('panelTitle').innerHTML = `<i class="fa-solid fa-plus mr-1"></i> 새 영상 등록`;
             document.getElementById('editTargetId').value = "";
@@ -247,7 +237,7 @@
             resetAdminForm();
         };
 
-        // 비밀번호 모달 관련 제어 함수
+        // 비밀번호 모달 제어
         window.openPasswordModal = () => {
             if(isAdmin) {
                 document.getElementById('adminPanel').classList.toggle('hidden');
@@ -267,9 +257,9 @@
             if(pass === '1213') {
                 isAdmin = true;
                 closePasswordModal();
-                render();
+                render(); // 리렌더링하여 관리자용 [수정], [삭제] 버튼 노출
                 document.getElementById('adminPanel').classList.remove('hidden');
-                showToast("관리자 인증 성공!");
+                showToast("관리자 권한이 활성화되었습니다.");
             } else {
                 alert("비밀번호가 올바르지 않습니다.");
                 document.getElementById('modalPasswordInput').value = "";
@@ -283,7 +273,6 @@
             setTimeout(() => t.classList.add('hidden'), 2500);
         }
 
-        // 패스워드 모달 엔터키 바인딩
         document.getElementById('modalPasswordInput').addEventListener('keydown', (e) => {
             if(e.key === 'Enter') verifyAdminPassword();
         });
