@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KUMA ARTGRID</title>
+    <!-- Tailwind CSS & FontAwesome CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        .premium-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+        }
+        .glow-effect:hover {
+            box-shadow: 0 10px 15px -3px rgba(100, 116, 139, 0.1), 0 4px 6px -2px rgba(100, 116, 139, 0.05);
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+        }
+        /* 토스트 알림 부드러운 애니메이션 */
+        @keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .toast-animate {
+            animation: slideUp 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-16 transition-colors duration-300">
+
+    <!-- 상단 네비게이션/헤더 -->
+    <header class="border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-50 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center shadow-md shadow-slate-700/20">
+                    <i class="fa-solid fa-play text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-900">KUMA ARTGRID</h1>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 text-xs bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-slate-600 font-medium">실시간 동기화 활성</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="max-w-4xl mx-auto px-4 mt-8">
+        
+        <!-- 대시보드 통계 카드 -->
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="premium-card p-5 rounded-2xl">
+                <p class="text-xs text-slate-500 mb-1 font-medium">총 등록 영상</p>
+                <h3 class="text-2xl font-bold text-slate-900" id="totalCount">Loading...</h3>
+            </div>
+            <div class="premium-card p-5 rounded-2xl">
+                <p class="text-xs text-slate-500 mb-1 font-medium">최신 업데이트</p>
+                <h3 class="text-2xl font-bold text-slate-700" id="latestCode">-</h3>
+            </div>
+        </div>
+
+        <!-- 검색창 및 컨트롤러 -->
+        <div class="mb-6 flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-grow">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input type="text" id="searchInput" placeholder="영상 코드 검색 (예: 60412)" 
+                       class="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all shadow-sm">
+            </div>
+            <button onclick="clearSearch()" class="px-5 py-3 bg-white hover:bg-slate-50 text-slate-600 font-medium rounded-xl border border-slate-200 shadow-sm transition">
+                초기화
+            </button>
+        </div>
+
+        <!-- 영상 다운로드 카드 리스트 -->
+        <div class="space-y-3" id="videoListContainer">
+            <div class="text-center py-12">
+                <i class="fa-solid fa-circle-notch animate-spin text-3xl text-slate-400 mb-3"></i>
+                <p class="text-slate-500 text-sm">실시간 데이터베이스 연결 중...</p>
+            </div>
+        </div>
+
+        <!-- 데이터가 없을 때 메시지 -->
+        <div id="noDataMessage" class="hidden text-center py-16 premium-card rounded-2xl border border-dashed border-slate-300">
+            <i class="fa-solid fa-folder-open text-4xl text-slate-300 mb-3"></i>
+            <p class="text-slate-500 font-medium">검색 결과와 일치하는 영상이 없습니다.</p>
+        </div>
+
+        <!-- 하단 관리자 편의 도구 (개발자 및 운영자 전용) -->
+        <div class="mt-12 border-t border-slate-200 pt-8">
+            <button onclick="toggleAdminPanel()" class="flex items-center space-x-2 text-xs text-slate-400 hover:text-slate-600 transition mx-auto font-medium">
+                <i class="fa-solid fa-gear"></i>
+                <span>영상 데이터 추가 도구 (운영자 전용)</span>
+                <i class="fa-solid fa-chevron-down text-[10px]" id="adminChevron"></i>
+            </button>
+            
+            <div id="adminPanel" class="hidden mt-4 premium-card p-6 rounded-2xl">
+                <h4 class="text-sm font-semibold text-slate-950 mb-4"><i class="fa-solid fa-screwdriver-wrench mr-2 text-slate-600"></i>실시간 영상 업로더</h4>
+                <p class="text-xs text-slate-500 mb-4">여기에 코드와 구글 드라이브 주소를 넣고 등록하면, 코드 수정 필요 없이 전 세계 사용자에게 바로 공유됩니다.</p>
+                
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-600 font-medium mb-1">영상 코드</label>
+                        <input type="text" id="adminCode" placeholder="예: 60412" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-slate-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-600 font-medium mb-1">구글 드라이브 공유 주소</label>
+                        <input type="text" id="adminUrl" placeholder="https://drive.google.com/file/d/... 또는 단축링크" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-slate-500">
+                    </div>
+                    <button onclick="uploadVideoToDatabase()" id="btnUpload" class="w-full bg-slate-700 hover:bg-slate-800 text-white font-medium text-sm py-2.5 px-4 rounded-lg shadow-sm transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>사이트에 바로 등록하기</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 🔒 운영자 비밀번호 입력 모달창 -->
+    <div id="passwordModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xl max-w-sm w-full mx-4">
+            <h3 class="text-lg font-bold text-slate-900 mb-1"><i class="fa-solid fa-lock text-slate-700 mr-2"></i>운영자 인증</h3>
+            <p class="text-xs text-slate-500 mb-4">도구를 사용하려면 비밀번호 숫자 4자리를 입력하세요.</p>
+            <div class="space-y-4">
+                <input type="password" id="passwordInput" maxlength="4" placeholder="••••" 
+                       class="w-full text-center bg-slate-50 border border-slate-200 rounded-xl py-3 text-2xl tracking-widest text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500"
+                       onkeyup="handlePasswordKeyUp(event)">
+                <div class="flex gap-2">
+                    <button onclick="closePasswordModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-sm rounded-xl transition">
+                        취소
+                    </button>
+                    <button onclick="verifyPassword()" class="w-1/2 py-2.5 bg-slate-700 hover:bg-slate-800 text-white font-medium text-sm rounded-xl transition shadow-sm">
+                        인증하기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 커스텀 토스트 알림창 (alert 대체) -->
+    <div id="customToast" class="hidden fixed bottom-6 right-6 bg-slate-950 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center space-x-3 z-50 toast-animate border border-slate-800">
+        <div class="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-check"></i>
+        </div>
+        <span id="toastMessage" class="text-sm font-medium">알림 메시지</span>
+    </div>
+
+    <!-- 링크 복사용 보이지 않는 임시 입력란 -->
+    <input type="text" id="fallbackCopyInput" class="absolute -top-40 left-0 opacity-0 pointer-events-none">
+
+    <!-- Firebase SDK 모듈식 가져오기 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ==========================================
+        // 💾 [환경설정 및 실시간 데이터베이스 연동]
+        // ==========================================
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kuma-artgrid-default';
+        let db, auth;
+        let currentUser = null;
+        let activeVideos = [];
+        let isAdminUnlocked = false; // 어드민 잠금 해제 여부
+
+        // 임시 로컬 모드용 데이터 (데모 환경 대비용 백업)
+        const localFallbackVideos = [
+            { id: "fallback-1", code: "60412", url: "https://drive.google.com/file/d/1RBEN7-1eLpBJyYyvyp910BnjFtyHAAPf/view?usp=drive_link" }
+        ];
+
+        // 1. Firebase 서비스 초기화 및 인증 수립
+        const initFirebase = async () => {
+            if (typeof __firebase_config === 'undefined') {
+                console.warn("실시간 데이터베이스 설정이 부재합니다. 데모 모드로 동작합니다.");
+                activeVideos = [...localFallbackVideos];
+                renderVideos();
+                updateStats();
+                return;
+            }
+
+            try {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // RULE 3 - 데이터 처리 전에 무조건 익명 혹은 커스텀 토큰 로그인 완료 대기
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    currentUser = user;
+                    if (user) {
+                        setupRealtimeSync();
+                    }
+                });
+
+            } catch (err) {
+                console.error("Firebase 로딩 에러:", err);
+                showToast("데이터베이스 연결 실패. 로컬 모드로 전환합니다.");
+                activeVideos = [...localFallbackVideos];
+                renderVideos();
+                updateStats();
+            }
+        };
+
+        // 2. 실시간 데이터베이스 실시간 동기화 리스너 수립
+        const setupRealtimeSync = () => {
+            // RULE 1 - 안전한 고유 도큐먼트 경로 준수
+            const videosColRef = collection(db, 'artifacts', appId, 'public', 'data', 'videos');
+
+            onSnapshot(videosColRef, (snapshot) => {
+                const list = [];
+                snapshot.forEach((doc) => {
+                    list.push({ id: doc.id, ...doc.data() });
+                });
+
+                activeVideos = list;
+
+                // RULE 2 - Firestore 복잡 쿼리 배제, 정렬은 항상 인메모리(자바스크립트)에서 진행
+                activeVideos.sort((a, b) => b.code.localeCompare(a.code, undefined, {numeric: true, sensitivity: 'base'}));
+                
+                renderVideos();
+                updateStats();
+            }, (error) => {
+                console.error("실시간 동기화 에러:", error);
+                showToast("데이터 갱신 중 에러가 발생했습니다.");
+            });
+        };
+
+        // ==========================================
+        // ⚙️ UI 렌더링 및 인터랙션 로직
+        // ==========================================
+
+        // 실시간 동기화된 데이터 목록을 화면에 그리는 함수
+        window.renderVideos = (filterText = "") => {
+            const container = document.getElementById('videoListContainer');
+            const noData = document.getElementById('noDataMessage');
+            
+            if (!container) return;
+            container.innerHTML = "";
+            
+            const filtered = activeVideos.filter(video => 
+                video.code.toLowerCase().includes(filterText.toLowerCase())
+            );
+
+            if (filtered.length === 0) {
+                noData.classList.remove('hidden');
+                return;
+            } else {
+                noData.classList.add('hidden');
+            }
+
+            filtered.forEach(video => {
+                const directUrl = convertToDirectDownload(video.url);
+                const card = document.createElement('div');
+                card.className = "premium-card p-5 rounded-2xl flex items-center justify-between glow-effect transition-all duration-300";
+                
+                // 어드민이 열린 상태라면 삭제(휴지통) 버튼을 노출합니다.
+                const deleteButtonHtml = isAdminUnlocked 
+                    ? `<button onclick="deleteVideo('${video.id}', '${video.code}')" class="p-3 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl transition border border-red-100" title="영상 삭제">
+                           <i class="fa-solid fa-trash-can text-sm"></i>
+                       </button>`
+                    : '';
+
+                card.innerHTML = `
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-700 text-lg border border-slate-100">
+                            <i class="fa-solid fa-file-video"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-slate-900 font-bold text-lg tracking-wide">${video.code}</h4>
+                            <p class="text-xs text-slate-500 mt-0.5 font-medium">구글 드라이브 클라우드 동기화 완료</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        ${deleteButtonHtml}
+                        <button onclick="copyToClipboard('${directUrl}')" class="p-3 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 rounded-xl transition border border-slate-200 shadow-sm" title="직접 링크 복사">
+                            <i class="fa-solid fa-link text-sm"></i>
+                        </button>
+                        <a href="${directUrl}" target="_blank" class="px-5 py-3 bg-slate-700 hover:bg-slate-800 text-white font-medium rounded-xl flex items-center space-x-2 shadow-md shadow-slate-700/10 transition duration-200">
+                            <i class="fa-solid fa-circle-arrow-down"></i>
+                            <span>다운로드</span>
+                        </a>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        };
+
+        // 데이터 통계 카드를 실시간 갱신하는 함수
+        const updateStats = () => {
+            const totalCountEl = document.getElementById('totalCount');
+            const latestCodeEl = document.getElementById('latestCode');
+            if (totalCountEl) {
+                totalCountEl.innerText = `${activeVideos.length}개`;
+            }
+            if (latestCodeEl) {
+                latestCodeEl.innerText = activeVideos.length > 0 ? activeVideos[0].code : '-';
+            }
+        };
+
+        // 구글 드라이브 주소를 가로채서 즉시 다운로드용 API 주소로 가공해주는 필터링
+        window.convertToDirectDownload = (inputUrl) => {
+            if (!inputUrl) return '#';
+            if (inputUrl.includes('drive.google.com/uc')) return inputUrl;
+
+            const fileDMatch = inputUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+            if (fileDMatch && fileDMatch[1]) {
+                return `https://drive.google.com/uc?export=download&id=${fileDMatch[1]}`;
+            }
+
+            const idParamMatch = inputUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+            if (idParamMatch && idParamMatch[1]) {
+                return `https://drive.google.com/uc?export=download&id=${idParamMatch[1]}`;
+            }
+
+            return inputUrl;
+        };
+
+        // 토스트 알림창 팝업 함수
+        window.showToast = (message) => {
+            const toast = document.getElementById('customToast');
+            const toastMsg = document.getElementById('toastMessage');
+            if (toast && toastMsg) {
+                toastMsg.innerText = message;
+                toast.classList.remove('hidden');
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                }, 3000);
+            }
+        };
+
+        // 클립보드 복사 유틸リティ
+        window.copyToClipboard = (text) => {
+            const tempInput = document.getElementById('fallbackCopyInput');
+            if (!tempInput) return;
+            tempInput.value = text;
+            tempInput.select();
+            tempInput.setSelectionRange(0, 99999);
+
+            try {
+                const success = document.execCommand('copy');
+                if (success) {
+                    showToast("다운로드 링크가 클립보드에 복사되었습니다!");
+                } else {
+                    throw new Error();
+                }
+            } catch (err) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast("다운로드 링크가 클립보드에 복사되었습니다!");
+                }).catch(e => {
+                    showToast("복사에 실패했습니다. 직접 복사해주세요.");
+                });
+            }
+        };
+
+        // ==========================================
+        // 🛠️ 어드민 업로드 및 원격 제어 기능
+        // ==========================================
+
+        // 실시간 클라우드 데이터베이스에 영상을 즉시 등록하는 기능 (코드 수정 필요 없음!)
+        window.uploadVideoToDatabase = async () => {
+            const codeInput = document.getElementById('adminCode');
+            const urlInput = document.getElementById('adminUrl');
+            const btnUpload = document.getElementById('btnUpload');
+
+            if (!codeInput || !urlInput) return;
+
+            const code = codeInput.value.trim();
+            const url = urlInput.value.trim();
+
+            if (!code || !url) {
+                showToast("영상 코드와 구글 드라이브 링크를 모두 입력해 주세요.");
+                return;
+            }
+
+            if (!db) {
+                // 데모 모드 (백업 모드 작동 시)
+                localFallbackVideos.push({ id: `local-${Date.now()}`, code, url });
+                activeVideos = [...localFallbackVideos];
+                activeVideos.sort((a, b) => b.code.localeCompare(a.code, undefined, {numeric: true, sensitivity: 'base'}));
+                renderVideos();
+                updateStats();
+                codeInput.value = "";
+                urlInput.value = "";
+                showToast("데모 저장소에 정상 추가되었습니다.");
+                return;
+            }
+
+            // 업로드 중 버튼 비활성화 처리
+            btnUpload.disabled = true;
+            btnUpload.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>업로드 중...</span>`;
+
+            try {
+                // RULE 1 - 공용 데이터베이스 위치 준수
+                const videosColRef = collection(db, 'artifacts', appId, 'public', 'data', 'videos');
+                await addDoc(videosColRef, {
+                    code: code,
+                    url: url,
+                    createdAt: Date.now()
+                });
+
+                showToast(`영상 ${code}가 성공적으로 실시간 등록되었습니다!`);
+                codeInput.value = "";
+                urlInput.value = "";
+            } catch (err) {
+                console.error("데이터베이스 추가 에러:", err);
+                showToast("등록 실패. 다시 시도해 주세요.");
+            } finally {
+                btnUpload.disabled = false;
+                btnUpload.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>사이트에 바로 등록하기</span>`;
+            }
+        };
+
+        // 사이트에서 마우스 클릭으로 바로 특정 영상 삭제하기
+        window.deleteVideo = async (docId, videoCode) => {
+            if (!confirm(`영상 코드 [${videoCode}]를 정말 삭제하시겠습니까?`)) {
+                return;
+            }
+
+            if (!db) {
+                // 로컬 폴백 모드 시
+                const idx = localFallbackVideos.findIndex(v => v.id === docId);
+                if (idx > -1) localFallbackVideos.splice(idx, 1);
+                activeVideos = [...localFallbackVideos];
+                renderVideos();
+                updateStats();
+                showToast("임시 메모리에서 정상 삭제되었습니다.");
+                return;
+            }
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'videos', docId);
+                await deleteDoc(docRef);
+                showToast(`[${videoCode}] 영상이 사이트에서 안전하게 삭제되었습니다.`);
+            } catch (err) {
+                console.error("데이터 삭제 실패:", err);
+                showToast("삭제 실패. 권한을 확인하세요.");
+            }
+        };
+
+        // ==========================================
+        // 🔐 운영자 모달 제어 및 비밀번호 통과 연계
+        // ==========================================
+        window.toggleAdminPanel = () => {
+            const panel = document.getElementById('adminPanel');
+            const chevron = document.getElementById('adminChevron');
+            if (!panel) return;
+            
+            if (!panel.classList.contains('hidden')) {
+                panel.classList.add('hidden');
+                if (chevron) chevron.classList.remove('rotate-180');
+                return;
+            }
+
+            if (isAdminUnlocked) {
+                panel.classList.remove('hidden');
+                if (chevron) chevron.classList.add('rotate-180');
+            } else {
+                window.openPasswordModal();
+            }
+        };
+
+        window.openPasswordModal = () => {
+            const modal = document.getElementById('passwordModal');
+            const input = document.getElementById('passwordInput');
+            if (modal) modal.classList.remove('hidden');
+            if (input) {
+                input.value = "";
+                input.focus();
+            }
+        };
+
+        window.closePasswordModal = () => {
+            const modal = document.getElementById('passwordModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.handlePasswordKeyUp = (event) => {
+            if (event.key === 'Enter') {
+                window.verifyPassword();
+            }
+        };
+
+        window.verifyPassword = () => {
+            const input = document.getElementById('passwordInput');
+            if (!input) return;
+
+            const val = input.value.trim();
+            if (val === '1213') {
+                isAdminUnlocked = true;
+                window.closePasswordModal();
+                showToast("운영자 권한이 승인되었습니다.");
+                
+                // 패널 열고 목록 다시 렌더링 (삭제 버튼 활성화를 위해)
+                const panel = document.getElementById('adminPanel');
+                const chevron = document.getElementById('adminChevron');
+                if (panel) panel.classList.remove('hidden');
+                if (chevron) chevron.classList.add('rotate-180');
+                
+                renderVideos();
+            } else {
+                showToast("비밀번호가 올바르지 않습니다.");
+                input.value = "";
+                input.focus();
+            }
+        };
+
+        // 실시간 검색 기능 연계
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                window.renderVideos(e.target.value);
+            });
+        }
+
+        window.clearSearch = () => {
+            if (searchInput) searchInput.value = "";
+            window.renderVideos();
+        };
+
+        // 시스템 기동
+        initFirebase();
+    </script>
+</body>
+</html>
