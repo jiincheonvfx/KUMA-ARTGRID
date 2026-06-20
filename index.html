@@ -50,7 +50,7 @@
             </div>
             <div class="flex items-center space-x-2 text-xs bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-slate-600 font-medium">실시간 동기화 활성</span>
+                <span class="text-slate-600 font-medium">스프레드시트 동기화 활성</span>
             </div>
         </div>
     </header>
@@ -62,7 +62,7 @@
         <div class="grid grid-cols-2 gap-4 mb-8">
             <div class="premium-card p-5 rounded-2xl">
                 <p class="text-xs text-slate-500 mb-1 font-medium">총 등록 영상</p>
-                <h3 class="text-2xl font-bold text-slate-900" id="totalCount">Loading...</h3>
+                <h3 class="text-2xl font-bold text-slate-900" id="totalCount">로드 중...</h3>
             </div>
             <div class="premium-card p-5 rounded-2xl">
                 <p class="text-xs text-slate-500 mb-1 font-medium">최신 업데이트</p>
@@ -88,7 +88,7 @@
         <div class="space-y-3" id="videoListContainer">
             <div class="text-center py-12">
                 <i class="fa-solid fa-circle-notch animate-spin text-3xl text-slate-400 mb-3"></i>
-                <p class="text-slate-500 text-sm">실시간 데이터베이스 연결 중...</p>
+                <p class="text-slate-500 text-sm">구글 스프레드시트 동기화 중...</p>
             </div>
         </div>
 
@@ -102,28 +102,18 @@
         <div class="mt-12 border-t border-slate-200 pt-8">
             <button onclick="toggleAdminPanel()" class="flex items-center space-x-2 text-xs text-slate-400 hover:text-slate-600 transition mx-auto font-medium">
                 <i class="fa-solid fa-gear"></i>
-                <span>영상 데이터 추가 도구 (운영자 전용)</span>
+                <span>스프레드시트 관리 도구 (운영자 전용)</span>
                 <i class="fa-solid fa-chevron-down text-[10px]" id="adminChevron"></i>
             </button>
             
-            <div id="adminPanel" class="hidden mt-4 premium-card p-6 rounded-2xl">
-                <h4 class="text-sm font-semibold text-slate-950 mb-4"><i class="fa-solid fa-screwdriver-wrench mr-2 text-slate-600"></i>실시간 영상 업로더</h4>
-                <p class="text-xs text-slate-500 mb-4">여기에 코드와 구글 드라이브 주소를 넣고 등록하면, 코드 수정 필요 없이 전 세계 사용자에게 바로 공유됩니다.</p>
+            <div id="adminPanel" class="hidden mt-4 premium-card p-6 rounded-2xl text-center">
+                <h4 class="text-sm font-semibold text-slate-950 mb-2"><i class="fa-solid fa-file-excel mr-2 text-emerald-600"></i>스프레드시트 바로가기</h4>
+                <p class="text-xs text-slate-500 mb-5">영상을 추가하거나 수정하려면 연동된 구글 스프레드시트를 직접 편집하시면 됩니다.</p>
                 
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs text-slate-600 font-medium mb-1">영상 코드</label>
-                        <input type="text" id="adminCode" placeholder="예: 60412" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-slate-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-600 font-medium mb-1">구글 드라이브 공유 주소</label>
-                        <input type="text" id="adminUrl" placeholder="https://drive.google.com/file/d/... 또는 단축링크" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-slate-500">
-                    </div>
-                    <button onclick="uploadVideoToDatabase()" id="btnUpload" class="w-full bg-slate-700 hover:bg-slate-800 text-white font-medium text-sm py-2.5 px-4 rounded-lg shadow-sm transition flex items-center justify-center space-x-2">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
-                        <span>사이트에 바로 등록하기</span>
-                    </button>
-                </div>
+                <a href="https://docs.google.com/spreadsheets" target="_blank" class="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm py-2.5 px-6 rounded-xl shadow-sm transition">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    <span>구글 스프레드시트 열기</span>
+                </a>
             </div>
         </div>
 
@@ -150,7 +140,7 @@
         </div>
     </div>
 
-    <!-- 커스텀 토스트 알림창 (alert 대체) -->
+    <!-- 커스텀 토스트 알림창 -->
     <div id="customToast" class="hidden fixed bottom-6 right-6 bg-slate-950 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center space-x-3 z-50 toast-animate border border-slate-800">
         <div class="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-xs">
             <i class="fa-solid fa-check"></i>
@@ -161,99 +151,104 @@
     <!-- 링크 복사용 보이지 않는 임시 입력란 -->
     <input type="text" id="fallbackCopyInput" class="absolute -top-40 left-0 opacity-0 pointer-events-none">
 
-    <!-- Firebase SDK 모듈식 가져오기 -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        // ==========================================
+        // 📊 [구글 스프레드시트 웹 게시 CSV 링크]
+        // ==========================================
+        const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_O1SsCWx0Q840uPbKUj6_t8wdfqN3devs-u1e5cRoQ-TBDbiOvx61SkOFIaPDXRiBRDbTT7VsTUkd/pub?output=csv";
 
-        // ==========================================
-        // 💾 [환경설정 및 실시간 데이터베이스 연동]
-        // ==========================================
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kuma-artgrid-default';
-        let db, auth;
-        let currentUser = null;
         let activeVideos = [];
         let isAdminUnlocked = false; // 어드민 잠금 해제 여부
 
-        // 임시 로컬 모드용 데이터 (데모 환경 대비용 백업)
-        const localFallbackVideos = [
-            { id: "fallback-1", code: "60412", url: "https://drive.google.com/file/d/1RBEN7-1eLpBJyYyvyp910BnjFtyHAAPf/view?usp=drive_link" }
-        ];
-
-        // 1. Firebase 서비스 초기화 및 인증 수립
-        const initFirebase = async () => {
-            if (typeof __firebase_config === 'undefined') {
-                console.warn("실시간 데이터베이스 설정이 부재합니다. 데모 모드로 동작합니다.");
-                activeVideos = [...localFallbackVideos];
-                renderVideos();
-                updateStats();
-                return;
-            }
-
+        // 1. 스프레드시트 CSV 데이터를 가져오고 파싱하는 함수
+        async function fetchSpreadsheetData() {
             try {
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                // RULE 3 - 데이터 처리 전에 무조건 익명 혹은 커스텀 토큰 로그인 완료 대기
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                onAuthStateChanged(auth, (user) => {
-                    currentUser = user;
-                    if (user) {
-                        setupRealtimeSync();
-                    }
-                });
-
-            } catch (err) {
-                console.error("Firebase 로딩 에러:", err);
-                showToast("데이터베이스 연결 실패. 로컬 모드로 전환합니다.");
-                activeVideos = [...localFallbackVideos];
-                renderVideos();
-                updateStats();
-            }
-        };
-
-        // 2. 실시간 데이터베이스 실시간 동기화 리스너 수립
-        const setupRealtimeSync = () => {
-            // RULE 1 - 안전한 고유 도큐먼트 경로 준수
-            const videosColRef = collection(db, 'artifacts', appId, 'public', 'data', 'videos');
-
-            onSnapshot(videosColRef, (snapshot) => {
-                const list = [];
-                snapshot.forEach((doc) => {
-                    list.push({ id: doc.id, ...doc.data() });
-                });
-
-                activeVideos = list;
+                const response = await fetch(GOOGLE_SHEETS_CSV_URL);
+                if (!response.ok) throw new Error("스프레드시트 파일을 가져오지 못했습니다.");
+                
+                const csvText = await response.text();
+                activeVideos = parseCSV(csvText);
                 
                 renderVideos();
                 updateStats();
-            }, (error) => {
-                console.error("실시간 동기화 에러:", error);
-                showToast("데이터 갱신 중 에러가 발생했습니다.");
-            });
-        };
+            } catch (err) {
+                console.error("데이터 로드 오류:", err);
+                showToast("스프레드시트 동기화 실패. 주소 또는 공개 설정을 확인하세요.");
+                
+                const container = document.getElementById('videoListContainer');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="text-center py-12 text-slate-500 text-sm">
+                            <i class="fa-solid fa-triangle-exclamation text-3xl text-amber-500 mb-3"></i>
+                            <p>실시간 데이터를 불러올 수 없습니다.</p>
+                            <p class="text-xs text-slate-400 mt-1">스프레드시트의 '웹에 게시(CSV)' 설정을 확인해 주세요.</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // CSV 문자열을 객체 배열로 변환하는 경량 파서
+        function parseCSV(csvText) {
+            const lines = [];
+            let row = [""];
+            lines.push(row);
+            let q = false; // 따옴표 랩핑 감지 플래그
+            let r = 0;
+
+            for (let char of csvText) {
+                if (char === '"') {
+                    q = !q;
+                } else if (char === ',' && !q) {
+                    row.push('');
+                    r++;
+                } else if (char === '\n' && !q) {
+                    row = [''];
+                    lines.push(row);
+                    r = 0;
+                } else if (char !== '\r') {
+                    row[r] += char;
+                }
+            }
+
+            if (lines.length === 0) return [];
+
+            // 헤더 분석 (코드, 링크 열 위치 매핑)
+            const headers = lines[0].map(h => h.trim().toLowerCase());
+            let codeIdx = headers.findIndex(h => h.includes('code') || h.includes('코드'));
+            let urlIdx = headers.findIndex(h => h.includes('url') || h.includes('link') || h.includes('링크') || h.includes('주소'));
+
+            // 열을 찾지 못할 경우의 폴백 세팅
+            if (codeIdx === -1) codeIdx = 0;
+            if (urlIdx === -1) urlIdx = 1;
+
+            const result = [];
+            for (let j = 1; j < lines.length; j++) {
+                const currentRow = lines[j];
+                if (currentRow.length <= Math.max(codeIdx, urlIdx)) continue;
+                
+                const code = currentRow[codeIdx]?.trim();
+                const url = currentRow[urlIdx]?.trim();
+                
+                if (code && url) {
+                    result.push({ code, url });
+                }
+            }
+            return result;
+        }
 
         // ==========================================
         // ⚙️ UI 렌더링 및 인터랙션 로직
         // ==========================================
 
-        // 실시간 동기화된 데이터 목록을 화면에 그리는 함수
-        window.renderVideos = (filterText = "") => {
+        function renderVideos(filterText = "") {
             const container = document.getElementById('videoListContainer');
             const noData = document.getElementById('noDataMessage');
             
             if (!container) return;
             container.innerHTML = "";
             
-            // 🛡️ [정렬 개선] 영상 코드를 확실하게 문자열로 변환한 후 빈칸을 제거하고 완벽하게 내림차순(최신순) 정렬합니다.
+            // 🛡️ [내림차순 정렬] 코드를 기준으로 완벽하게 최신순(내림차순) 자동 정렬
             activeVideos.sort((a, b) => {
                 const codeA = String(a.code || '').trim();
                 const codeB = String(b.code || '').trim();
@@ -275,13 +270,6 @@
                 const directUrl = convertToDirectDownload(video.url);
                 const card = document.createElement('div');
                 card.className = "premium-card p-5 rounded-2xl flex items-center justify-between glow-effect transition-all duration-300";
-                
-                // 어드민이 열린 상태라면 삭제(휴지통) 버튼을 노출합니다.
-                const deleteButtonHtml = isAdminUnlocked 
-                    ? `<button onclick="deleteVideo('${video.id}', '${video.code}')" class="p-3 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl transition border border-red-100" title="영상 삭제">
-                           <i class="fa-solid fa-trash-can text-sm"></i>
-                       </button>`
-                    : '';
 
                 card.innerHTML = `
                     <div class="flex items-center space-x-4">
@@ -290,11 +278,10 @@
                         </div>
                         <div>
                             <h4 class="text-slate-900 font-bold text-lg tracking-wide">${video.code}</h4>
-                            <p class="text-xs text-slate-500 mt-0.5 font-medium">구글 드라이브 클라우드 동기화 완료</p>
+                            <p class="text-xs text-slate-500 mt-0.5 font-medium">구글 드라이브 동기화 완료</p>
                         </div>
                     </div>
                     <div class="flex items-center space-x-2">
-                        ${deleteButtonHtml}
                         <button onclick="copyToClipboard('${directUrl}')" class="p-3 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 rounded-xl transition border border-slate-200 shadow-sm" title="직접 링크 복사">
                             <i class="fa-solid fa-link text-sm"></i>
                         </button>
@@ -306,9 +293,8 @@
                 `;
                 container.appendChild(card);
             });
-        };
+        }
 
-        // 데이터 통계 카드를 실시간 갱신하는 함수
         const updateStats = () => {
             const totalCountEl = document.getElementById('totalCount');
             const latestCodeEl = document.getElementById('latestCode');
@@ -316,13 +302,12 @@
                 totalCountEl.innerText = `${activeVideos.length}개`;
             }
             if (latestCodeEl) {
-                // 이미 정렬이 완료된 상태이므로 첫 번째 요소를 가져옵니다.
                 latestCodeEl.innerText = activeVideos.length > 0 ? activeVideos[0].code : '-';
             }
         };
 
-        // 구글 드라이브 주소를 가로채서 즉시 다운로드용 API 주소로 가공해주는 필터링
-        window.convertToDirectDownload = (inputUrl) => {
+        // 구글 드라이브 공유 링크를 즉시 다운로드용 Direct URL로 치환
+        function convertToDirectDownload(inputUrl) {
             if (!inputUrl) return '#';
             if (inputUrl.includes('drive.google.com/uc')) return inputUrl;
 
@@ -337,10 +322,9 @@
             }
 
             return inputUrl;
-        };
+        }
 
-        // 토스트 알림창 팝업 함수
-        window.showToast = (message) => {
+        function showToast(message) {
             const toast = document.getElementById('customToast');
             const toastMsg = document.getElementById('toastMessage');
             if (toast && toastMsg) {
@@ -350,9 +334,8 @@
                     toast.classList.add('hidden');
                 }, 3000);
             }
-        };
+        }
 
-        // 클립보드 복사 유틸리티
         window.copyToClipboard = (text) => {
             const tempInput = document.getElementById('fallbackCopyInput');
             if (!tempInput) return;
@@ -373,90 +356,6 @@
                 }).catch(e => {
                     showToast("복사에 실패했습니다. 직접 복사해주세요.");
                 });
-            }
-        };
-
-        // ==========================================
-        // 🛠️ 어드민 업로드 및 원격 제어 기능
-        // ==========================================
-
-        // 실시간 클라우드 데이터베이스에 영상을 즉시 등록하는 기능 (코드 수정 필요 없음!)
-        window.uploadVideoToDatabase = async () => {
-            const codeInput = document.getElementById('adminCode');
-            const urlInput = document.getElementById('adminUrl');
-            const btnUpload = document.getElementById('btnUpload');
-
-            if (!codeInput || !urlInput) return;
-
-            const code = codeInput.value.trim();
-            const url = urlInput.value.trim();
-
-            if (!code || !url) {
-                showToast("영상 코드와 구글 드라이브 링크를 모두 입력해 주세요.");
-                return;
-            }
-
-            if (!db) {
-                // 데모 모드 (백업 모드 작동 시)
-                localFallbackVideos.push({ id: `local-${Date.now()}`, code, url });
-                activeVideos = [...localFallbackVideos];
-                renderVideos();
-                updateStats();
-                codeInput.value = "";
-                urlInput.value = "";
-                showToast("데모 저장소에 정상 추가되었습니다.");
-                return;
-            }
-
-            // 업로드 중 버튼 비활성화 처리
-            btnUpload.disabled = true;
-            btnUpload.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>업로드 중...</span>`;
-
-            try {
-                // RULE 1 - 공용 데이터베이스 위치 준수
-                const videosColRef = collection(db, 'artifacts', appId, 'public', 'data', 'videos');
-                await addDoc(videosColRef, {
-                    code: code,
-                    url: url,
-                    createdAt: Date.now()
-                });
-
-                showToast(`영상 ${code}가 성공적으로 실시간 등록되었습니다!`);
-                codeInput.value = "";
-                urlInput.value = "";
-            } catch (err) {
-                console.error("데이터베이스 추가 에러:", err);
-                showToast("등록 실패. 다시 시도해 주세요.");
-            } finally {
-                btnUpload.disabled = false;
-                btnUpload.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>사이트에 바로 등록하기</span>`;
-            }
-        };
-
-        // 사이트에서 마우스 클릭으로 바로 특정 영상 삭제하기
-        window.deleteVideo = async (docId, videoCode) => {
-            if (!confirm(`영상 코드 [${videoCode}]를 정말 삭제하시겠습니까?`)) {
-                return;
-            }
-
-            if (!db) {
-                // 로컬 폴백 모드 시
-                const idx = localFallbackVideos.findIndex(v => v.id === docId);
-                if (idx > -1) localFallbackVideos.splice(idx, 1);
-                activeVideos = [...localFallbackVideos];
-                renderVideos();
-                updateStats();
-                showToast("임시 메모리에서 정상 삭제되었습니다.");
-                return;
-            }
-
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'videos', docId);
-                await deleteDoc(docRef);
-                showToast(`[${videoCode}] 영상이 사이트에서 안전하게 삭제되었습니다.`);
-            } catch (err) {
-                console.error("데이터 삭제 실패:", err);
-                showToast("삭제 실패. 권한을 확인하세요.");
             }
         };
 
@@ -513,7 +412,6 @@
                 window.closePasswordModal();
                 showToast("운영자 권한이 승인되었습니다.");
                 
-                // 패널 열고 목록 다시 렌더링 (삭제 버튼 활성화를 위해)
                 const panel = document.getElementById('adminPanel');
                 const chevron = document.getElementById('adminChevron');
                 if (panel) panel.classList.remove('hidden');
@@ -540,8 +438,8 @@
             window.renderVideos();
         };
 
-        // 시스템 기동
-        initFirebase();
+        // 초기 시스템 기동
+        fetchSpreadsheetData();
     </script>
 </body>
 </html>
