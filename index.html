@@ -31,25 +31,19 @@
     </header>
 
     <main class="max-w-4xl mx-auto px-4 mt-8">
-        <!-- 1. core 관련 상단 현황판 제거 완료 -->
-
-        <!-- 검색창 -->
         <div class="mb-6 flex gap-3">
             <input type="text" id="searchInput" placeholder="코드 검색 (예: 60412)" 
                    class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm focus:ring-2 focus:ring-slate-500/20 outline-none">
         </div>
 
-        <!-- 비디오 리스트 컨테이너 -->
         <div class="space-y-3" id="videoListContainer"></div>
         <div id="noDataMessage" class="hidden text-center py-16 text-slate-400">데이터가 없습니다.</div>
 
-        <!-- 하단 관리자 도구 버튼 및 숨겨진 업로드 창 -->
         <div class="mt-12 border-t border-slate-200 pt-8">
             <button onclick="openPasswordModal()" class="text-xs text-slate-400 mx-auto block hover:text-slate-600 font-medium">
                 영상 관리 도구 <i class="fa-solid fa-chevron-down ml-1"></i>
             </button>
             
-            <!-- 비밀번호를 맞추면 노출되는 업로드 패널 -->
             <div id="adminPanel" class="hidden mt-4 premium-card p-6 rounded-2xl">
                 <h3 class="text-sm font-bold text-slate-800 mb-3">새 영상 실시간 등록</h3>
                 <input type="text" id="adminCode" placeholder="영상 코드 입력" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-400">
@@ -59,7 +53,6 @@
         </div>
     </main>
 
-    <!-- 비밀번호 입력 커스텀 모달 (비밀번호 노출 안됨) -->
     <div id="passwordModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4">
         <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-slate-100">
             <div class="flex justify-between items-center mb-4">
@@ -72,60 +65,58 @@
         </div>
     </div>
 
-    <!-- 토스트 알림창 -->
     <div id="customToast" class="hidden fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl z-50 toast-animate"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, doc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 💡 [중요] 시크릿 모드나 다른 환경에서도 실시간 연동이 되게 하려면, 
-        // 아래 firebaseConfig에 본인의 실제 Firebase 콘솔 프로젝트 설정값을 직접 넣어주셔야 합니다.
+        // 🌟 보내주신 사진 속의 소중한 고유 정보들을 안전하게 대입해 두었습니다!
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyAEiZ6juSz2mlBCbV16xjvfbFkU_5N-lY8",
+            authDomain: "kuma-artgrid.firebaseapp.com",
+            databaseURL: "https://kuma-artgrid-default-rtdb.firebaseio.com",
+            projectId: "kuma-artgrid",
+            storageBucket: "kuma-artgrid.firebasestorage.app",
+            messagingSenderId: "470387898943",
+            appId: "1:470387898943:web:15b476776d124f54f9168a",
+            measurementId: "G-94HL20Z884"
         };
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kuma-artgrid';
         let db = null;
         let activeVideos = [];
         let isAdmin = false;
 
-        const LOCAL_STORAGE_KEY = "kuma_artgrid_data";
-
         const init = async () => {
-            // 외부 주입 환경 변수가 있다면 사용하고, 없다면 하드코딩된 firebaseConfig 사용
-            const hasEnvConfig = (typeof __firebase_config !== 'undefined' && __firebase_config);
-            const finalConfig = hasEnvConfig ? JSON.parse(__firebase_config) : firebaseConfig;
-
-            if (finalConfig && finalConfig.apiKey && finalConfig.apiKey !== "YOUR_API_KEY") {
-                const app = initializeApp(finalConfig);
+            try {
+                const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
                 db = getFirestore(app);
                 
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-                else await signInAnonymously(auth);
+                await signInAnonymously(auth);
 
                 document.getElementById('syncStatus').innerText = "온라인 동기화 중";
-                const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'videos'));
                 
-                // Firestore 실시간 변경 감지 리스너
+                const q = query(collection(db, 'videos'));
+                
                 onSnapshot(q, (snapshot) => {
                     activeVideos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(activeVideos));
-                    render();
+                    render(document.getElementById('searchInput').value);
+                }, (error) => {
+                    console.error("Firestore 로드 에러:", error);
+                    fallbackToLocal();
                 });
-            } else {
-                // Firebase 세팅이 안 되어 있을 때 작동하는 로컬 대체 모드
-                activeVideos = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
-                document.getElementById('syncStatus').innerText = "오프라인 로컬 모드";
-                render();
+            } catch(e) {
+                console.error("초기화 실패:", e);
+                fallbackToLocal();
             }
+        };
+
+        const fallbackToLocal = () => {
+            activeVideos = JSON.parse(localStorage.getItem("kuma_artgrid_data") || '[]');
+            document.getElementById('syncStatus').innerText = "오프라인 로컬 모드";
+            render();
         };
 
         const render = (filter = "") => {
@@ -133,10 +124,9 @@
             const noData = document.getElementById('noDataMessage');
             container.innerHTML = "";
             
-            const filtered = activeVideos.filter(v => v.code.includes(filter));
+            const filtered = activeVideos.filter(v => String(v.code).includes(filter));
             
-            // 3. 코드 번호 기준 '오름차순' 정렬 (작은 숫자부터 차례대로 정렬)
-            filtered.sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true}));
+            filtered.sort((a, b) => String(a.code).localeCompare(String(b.code), undefined, {numeric: true}));
 
             if(filtered.length === 0) noData.classList.remove('hidden');
             else noData.classList.add('hidden');
@@ -147,7 +137,7 @@
                 div.innerHTML = `
                     <div><h4 class="font-bold text-slate-800">${v.code}</h4></div>
                     <div class="flex gap-2">
-                        ${isAdmin ? `<button onclick="deleteVideo('${v.id}')" class="text-red-400 px-3 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        ${isAdmin ? `<button onclick="deleteVideo('${v.id}')" class="text-red-400 px-3 hover:text-red-600 mr-2"><i class="fa-solid fa-trash"></i></button>` : ''}
                         <a href="${v.url.includes('drive') ? v.url.replace('/view?', '/uc?export=download&') : v.url}" target="_blank" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-slate-700 transition-colors">다운로드</a>
                     </div>
                 `;
@@ -167,10 +157,10 @@
             }
 
             if(db) {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'videos'), { code, url });
+                await addDoc(collection(db, 'videos'), { code, url });
             } else {
                 activeVideos.push({ id: Date.now().toString(), code, url });
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(activeVideos));
+                localStorage.setItem("kuma_artgrid_data", JSON.stringify(activeVideos));
                 render();
             }
 
@@ -182,16 +172,15 @@
         window.deleteVideo = async (id) => {
             if(!confirm("해당 영상을 정말 삭제하시겠습니까?")) return;
             if(db) {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'videos', id));
+                await deleteDoc(doc(db, 'videos', id));
             } else {
                 activeVideos = activeVideos.filter(v => v.id !== id);
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(activeVideos));
+                localStorage.setItem("kuma_artgrid_data", JSON.stringify(activeVideos));
                 render();
             }
             showToast("영상이 삭제되었습니다.");
         };
 
-        // 패스워드 모달 제어 함수
         window.openPasswordModal = () => {
             if(isAdmin) {
                 document.getElementById('adminPanel').classList.toggle('hidden');
@@ -210,7 +199,7 @@
             if(inputPass === '1213') {
                 isAdmin = true;
                 closePasswordModal();
-                render();
+                render(document.getElementById('searchInput').value);
                 document.getElementById('adminPanel').classList.remove('hidden');
                 showToast("관리자 인증 성공!");
             } else {
@@ -218,7 +207,6 @@
             }
         };
 
-        // 엔터키 지원
         document.getElementById('modalPasswordInput').addEventListener('keypress', (e) => {
             if(e.key === 'Enter') checkAdminPassword();
         });
