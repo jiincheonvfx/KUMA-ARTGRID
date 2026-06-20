@@ -2,33 +2,289 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KUMA ARTGRID</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', 'Noto Sans KR', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        .premium-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .glow-effect:hover { border-color: #cbd5e1; transform: translateY(-1px); }
+        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-fade-in { animation: slideUp 0.25s ease-out forwards; }
+    </style>
 </head>
-<body class="p-10">
-    <h1 class="text-2xl font-bold">KUMA ARTGRID 실행 중...</h1>
-    <div id="status" class="mt-4 text-gray-600">연결 확인 중...</div>
+<body class="min-h-screen pb-16">
+
+    <header class="border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-40 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-play text-white"></i>
+                </div>
+                <h1 class="text-lg font-bold text-slate-900">KUMA ARTGRID</h1>
+            </div>
+            <div id="syncStatus" class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">데이터 로드 중...</div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 mt-8">
+        <div class="mb-6 flex gap-3">
+            <input type="text" id="searchInput" placeholder="코드 검색 (예: 60412)" 
+                   class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm focus:ring-2 focus:ring-slate-500/20 outline-none">
+        </div>
+
+        <!-- 실시간 비디오 목록 컨테이너 -->
+        <div class="space-y-3" id="videoListContainer"></div>
+        <div id="noDataMessage" class="hidden text-center py-16 text-slate-400">데이터가 없습니다.</div>
+
+        <!-- 하단 관리자 패널 영역 -->
+        <div class="mt-12 border-t border-slate-200 pt-8">
+            <button onclick="openPasswordModal()" class="text-xs text-slate-400 mx-auto block hover:text-slate-600 font-medium">
+                영상 관리 도구 <i class="fa-solid fa-lock ml-1"></i>
+            </button>
+            
+            <!-- 업로드 및 수정 양식 (인증 후 표시됨) -->
+            <div id="adminPanel" class="hidden mt-4 premium-card p-6 rounded-2xl animate-fade-in">
+                <h3 id="panelTitle" class="text-sm font-bold text-slate-800 mb-3"><i class="fa-solid fa-plus mr-1"></i> 새 영상 등록</h3>
+                <input type="hidden" id="editTargetId">
+                <input type="text" id="adminCode" placeholder="영상 코드 (예: 60412)" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-400">
+                <input type="text" id="adminUrl" placeholder="영상 다운로드 링크 또는 구글 드라이브 주소" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-slate-400">
+                <div class="flex gap-2">
+                    <button id="submitBtn" onclick="processUpload()" class="flex-1 bg-slate-800 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition">등록하기</button>
+                    <button id="cancelEditBtn" onclick="resetAdminForm()" class="hidden bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-300 transition">취소</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 비밀번호 입력 커스텀 모달 (●●●● 처리 및 노출 방지) -->
+    <div id="passwordModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-80 animate-fade-in border border-slate-100">
+            <h3 class="font-bold text-slate-900 mb-2 text-center">관리자 인증</h3>
+            <p class="text-xs text-slate-400 text-center mb-4">비밀번호를 입력하세요.</p>
+            <input type="password" id="modalPasswordInput" class="w-full text-center tracking-widest bg-slate-50 border border-slate-200 rounded-xl py-3 mb-4 outline-none focus:ring-2 focus:ring-slate-500/20 text-lg font-bold" placeholder="••••">
+            <div class="flex gap-2">
+                <button onclick="closePasswordModal()" class="flex-1 bg-slate-100 text-slate-500 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-200">취소</button>
+                <button onclick="verifyAdminPassword()" class="flex-1 bg-slate-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-slate-700">인증</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="customToast" class="hidden fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl z-50 text-sm font-medium"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, doc, deleteDoc, updateDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // 💡 중요: 시크릿 모드/로컬 상시 실시간 연동을 위해 발급받은 Firebase 인증 오브젝트 키를 아래에 입력해 채워주세요.
         const firebaseConfig = {
-            apiKey: "AIzaSyDF0vZjBSt6RQmwP8smbXgtBaky3_5000g",
-            authDomain: "kuma-artgrid-d60b7.firebaseapp.com",
-            projectId: "kuma-artgrid-d60b7",
-            storageBucket: "kuma-artgrid-d60b7.firebasestorage.app",
-            messagingSenderId: "765555184972",
-            appId: "1:765555184972:web:54ece8610d381cb7c12be9"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
-        try {
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            document.getElementById('status').innerText = "✅ 연결 성공! 정상 작동 중입니다.";
-        } catch (e) {
-            document.getElementById('status').innerText = "❌ 오류 발생: " + e.message;
+        const appId = 'kuma-artgrid';
+        let db = null;
+        let activeVideos = [];
+        let isAdmin = false;
+
+        const init = async () => {
+            // 발급 데이터 입력 확인용 검사 (미입력 시 에러 핸들링 유도)
+            if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+                document.getElementById('syncStatus').innerText = "Firebase 설정 필요 (로컬 실행 중)";
+                loadLocalFallback();
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                db = getFirestore(app);
+                await signInAnonymously(auth);
+
+                document.getElementById('syncStatus').innerText = "온라인 실시간 동기화 중";
+                const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'videos'));
+                onSnapshot(q, (snapshot) => {
+                    activeVideos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    render();
+                });
+            } catch (error) {
+                console.error("서버 연결 실패:", error);
+                document.getElementById('syncStatus').innerText = "네트워크 오프라인";
+                loadLocalFallback();
+            }
+        };
+
+        const loadLocalFallback = () => {
+            activeVideos = JSON.parse(localStorage.getItem("kuma_artgrid_local") || '[]');
+            render();
+        };
+
+        const render = (filter = "") => {
+            const container = document.getElementById('videoListContainer');
+            const noData = document.getElementById('noDataMessage');
+            container.innerHTML = "";
+            
+            const filtered = activeVideos.filter(v => v.code.includes(filter));
+            filtered.sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true}));
+
+            if(filtered.length === 0) noData.classList.remove('hidden');
+            else noData.classList.add('hidden');
+
+            filtered.forEach(v => {
+                const div = document.createElement('div');
+                div.className = "premium-card p-4 rounded-2xl flex justify-between items-center animate-fade-in";
+                
+                // 제한된 구글드라이브 링크의 다운로드 파싱 오류 발생 시, 원본 뷰어 주소로 열릴 수 있도록 안전 가공처리 적용
+                let processedUrl = v.url;
+                if (v.url.includes('drive.google.com')) {
+                    if (v.url.includes('/view?')) {
+                        processedUrl = v.url.replace('/view?', '/uc?export=download&');
+                    } else if (!v.url.includes('/uc?')) {
+                        // 공유 주소 링크가 비표준 규칙인 경우 원본 뷰어로 보존(로그인 권한 소유 유저를 위해)
+                        processedUrl = v.url;
+                    }
+                }
+
+                div.innerHTML = `
+                    <div><h4 class="font-bold text-slate-800">${v.code}</h4></div>
+                    <div class="flex gap-1">
+                        ${isAdmin ? `
+                            <button onclick="startEditVideo('${v.id}', '${v.code}', '${v.url}')" class="text-slate-400 hover:text-blue-500 px-2 transition"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteVideo('${v.id}')" class="text-slate-400 hover:text-red-500 px-2 mr-1 transition"><i class="fa-solid fa-trash"></i></button>
+                        ` : ''}
+                        <a href="${processedUrl}" target="_blank" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition">다운로드</a>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        };
+
+        // 업로드 및 수정을 총괄 처리하는 유기 함수
+        window.processUpload = async () => {
+            const codeInput = document.getElementById('adminCode');
+            const urlInput = document.getElementById('adminUrl');
+            const editId = document.getElementById('editTargetId').value;
+            
+            const code = codeInput.value.trim();
+            const url = urlInput.value.trim();
+
+            if(!code || !url) {
+                alert("코드와 주소 링크를 모두 정확하게 작성해주세요.");
+                return;
+            }
+
+            if(editId) {
+                // [수정 모드 실행]
+                if(db) {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'videos', editId), { code, url });
+                } else {
+                    const idx = activeVideos.findIndex(v => v.id === editId);
+                    if(idx !== -1) activeVideos[idx] = { id: editId, code, url };
+                    localStorage.setItem("kuma_artgrid_local", JSON.stringify(activeVideos));
+                    render();
+                }
+                showToast("수정이 완료되었습니다!");
+            } else {
+                // [새 영상 등록 모드 실행]
+                if(db) {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'videos'), { code, url });
+                } else {
+                    activeVideos.push({ id: Date.now().toString(), code, url });
+                    localStorage.setItem("kuma_artgrid_local", JSON.stringify(activeVideos));
+                    render();
+                }
+                showToast("실시간 등록 완료!");
+            }
+            resetAdminForm();
+        };
+
+        // 수정 탭 데이터 채우기 활성화
+        window.startEditVideo = (id, code, url) => {
+            document.getElementById('panelTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-blue-500 mr-1"></i> 영상 정보 수정 중...`;
+            document.getElementById('editTargetId').value = id;
+            document.getElementById('adminCode').value = code;
+            document.getElementById('adminUrl').value = url;
+            document.getElementById('submitBtn').innerText = "수정 완료";
+            document.getElementById('submitBtn').className = "flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition";
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            document.getElementById('adminCode').focus();
+        };
+
+        // 입력 폼 초기화 및 일반 등록 폼 복원
+        window.resetAdminForm = () => {
+            document.getElementById('panelTitle').innerHTML = `<i class="fa-solid fa-plus mr-1"></i> 새 영상 등록`;
+            document.getElementById('editTargetId').value = "";
+            document.getElementById('adminCode').value = "";
+            document.getElementById('adminUrl').value = "";
+            document.getElementById('submitBtn').innerText = "등록하기";
+            document.getElementById('submitBtn').className = "flex-1 bg-slate-800 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-700 transition";
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+        };
+
+        window.deleteVideo = async (id) => {
+            if(!confirm("해당 영상을 목록에서 완전히 삭제하시겠습니까?")) return;
+            if(db) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'videos', id));
+            } else {
+                activeVideos = activeVideos.filter(v => v.id !== id);
+                localStorage.setItem("kuma_artgrid_local", JSON.stringify(activeVideos));
+                render();
+            }
+            showToast("삭제 완료!");
+            resetAdminForm();
+        };
+
+        // 안전 비밀번호 인터페이스 함수들
+        window.openPasswordModal = () => {
+            if(isAdmin) {
+                document.getElementById('adminPanel').classList.toggle('hidden');
+            } else {
+                document.getElementById('passwordModal').classList.remove('hidden');
+                document.getElementById('modalPasswordInput').focus();
+            }
+        };
+
+        window.closePasswordModal = () => {
+            document.getElementById('passwordModal').classList.add('hidden');
+            document.getElementById('modalPasswordInput').value = "";
+        };
+
+        window.verifyAdminPassword = () => {
+            const pass = document.getElementById('modalPasswordInput').value;
+            if(pass === '1213') {
+                isAdmin = true;
+                closePasswordModal();
+                render();
+                document.getElementById('adminPanel').classList.remove('hidden');
+                showToast("관리자 인증 성공!");
+            } else {
+                alert("비밀번호가 올바르지 않습니다.");
+                document.getElementById('modalPasswordInput').value = "";
+                document.getElementById('modalPasswordInput').focus();
+            }
+        };
+
+        function showToast(msg) {
+            const t = document.getElementById('customToast');
+            t.innerText = msg; t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 2500);
         }
+
+        // 비밀번호 입력창 엔터 이벤트 처리
+        document.getElementById('modalPasswordInput').addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') verifyAdminPassword();
+        });
+
+        document.getElementById('searchInput').oninput = (e) => render(e.target.value);
+        init();
     </script>
 </body>
 </html>
