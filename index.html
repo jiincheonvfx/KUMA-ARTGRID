@@ -4,442 +4,167 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KUMA ARTGRID</title>
-    <!-- Tailwind CSS & FontAwesome CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     
     <style>
-        body {
-            font-family: 'Inter', 'Noto Sans KR', sans-serif;
-            background-color: #f8fafc;
-            color: #0f172a;
-        }
-        .premium-card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
-        }
-        .glow-effect:hover {
-            box-shadow: 0 10px 15px -3px rgba(100, 116, 139, 0.1), 0 4px 6px -2px rgba(100, 116, 139, 0.05);
-            border-color: #cbd5e1;
-            transform: translateY(-1px);
-        }
-        /* 토스트 알림 부드러운 애니메이션 */
-        @keyframes slideUp {
-            from { transform: translateY(100px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        .toast-animate {
-            animation: slideUp 0.3s ease-out forwards;
-        }
+        body { font-family: 'Inter', 'Noto Sans KR', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        .premium-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .glow-effect:hover { border-color: #cbd5e1; transform: translateY(-1px); }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .toast-animate { animation: slideUp 0.3s ease-out forwards; }
     </style>
 </head>
-<body class="min-h-screen pb-16 transition-colors duration-300">
+<body class="min-h-screen pb-16">
 
-    <!-- 상단 네비게이션/헤더 -->
     <header class="border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-50 shadow-sm">
         <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center shadow-md shadow-slate-700/20">
-                    <i class="fa-solid fa-play text-white text-lg"></i>
+                <div class="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-play text-white"></i>
                 </div>
-                <div>
-                    <h1 class="text-lg font-bold tracking-tight text-slate-900">KUMA ARTGRID</h1>
-                </div>
+                <h1 class="text-lg font-bold text-slate-900">KUMA ARTGRID</h1>
             </div>
-            <div class="flex items-center space-x-2 text-xs bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-slate-600 font-medium">스프레드시트 동기화 활성</span>
-            </div>
+            <div id="syncStatus" class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">데이터 로드 중...</div>
         </div>
     </header>
 
-    <!-- 메인 컨텐츠 영역 -->
     <main class="max-w-4xl mx-auto px-4 mt-8">
-        
-        <!-- 대시보드 통계 카드 -->
         <div class="grid grid-cols-2 gap-4 mb-8">
             <div class="premium-card p-5 rounded-2xl">
-                <p class="text-xs text-slate-500 mb-1 font-medium">총 등록 영상</p>
-                <h3 class="text-2xl font-bold text-slate-900" id="totalCount">로드 중...</h3>
+                <p class="text-xs text-slate-500">총 영상</p>
+                <h3 class="text-2xl font-bold" id="totalCount">-</h3>
             </div>
             <div class="premium-card p-5 rounded-2xl">
-                <p class="text-xs text-slate-500 mb-1 font-medium">최신 업데이트</p>
-                <h3 class="text-2xl font-bold text-slate-700" id="latestCode">-</h3>
+                <p class="text-xs text-slate-500">최신 코드</p>
+                <h3 class="text-2xl font-bold" id="latestCode">-</h3>
             </div>
         </div>
 
-        <!-- 검색창 및 컨트롤러 -->
-        <div class="mb-6 flex flex-col sm:flex-row gap-3">
-            <div class="relative flex-grow">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </span>
-                <input type="text" id="searchInput" placeholder="영상 코드 검색 (예: 60412)" 
-                       class="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all shadow-sm">
-            </div>
-            <button onclick="clearSearch()" class="px-5 py-3 bg-white hover:bg-slate-50 text-slate-600 font-medium rounded-xl border border-slate-200 shadow-sm transition">
-                초기화
-            </button>
+        <div class="mb-6 flex gap-3">
+            <input type="text" id="searchInput" placeholder="코드 검색 (예: 60412)" 
+                   class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm focus:ring-2 focus:ring-slate-500/20 outline-none">
         </div>
 
-        <!-- 영상 다운로드 카드 리스트 -->
-        <div class="space-y-3" id="videoListContainer">
-            <div class="text-center py-12">
-                <i class="fa-solid fa-circle-notch animate-spin text-3xl text-slate-400 mb-3"></i>
-                <p class="text-slate-500 text-sm">구글 스프레드시트 동기화 중...</p>
-            </div>
-        </div>
+        <div class="space-y-3" id="videoListContainer"></div>
+        <div id="noDataMessage" class="hidden text-center py-16 text-slate-400">데이터가 없습니다.</div>
 
-        <!-- 데이터가 없을 때 메시지 -->
-        <div id="noDataMessage" class="hidden text-center py-16 premium-card rounded-2xl border border-dashed border-slate-300">
-            <i class="fa-solid fa-folder-open text-4xl text-slate-300 mb-3"></i>
-            <p class="text-slate-500 font-medium">검색 결과와 일치하는 영상이 없습니다.</p>
-        </div>
-
-        <!-- 하단 관리자 편의 도구 (개발자 및 운영자 전용) -->
         <div class="mt-12 border-t border-slate-200 pt-8">
-            <button onclick="toggleAdminPanel()" class="flex items-center space-x-2 text-xs text-slate-400 hover:text-slate-600 transition mx-auto font-medium">
-                <i class="fa-solid fa-gear"></i>
-                <span>스프레드시트 관리 도구 (운영자 전용)</span>
-                <i class="fa-solid fa-chevron-down text-[10px]" id="adminChevron"></i>
+            <button onclick="toggleAdminPanel()" class="text-xs text-slate-400 mx-auto block hover:text-slate-600 font-medium">
+                영상 관리 도구 <i class="fa-solid fa-chevron-down ml-1"></i>
             </button>
-            
-            <div id="adminPanel" class="hidden mt-4 premium-card p-6 rounded-2xl text-center">
-                <h4 class="text-sm font-semibold text-slate-950 mb-2"><i class="fa-solid fa-file-excel mr-2 text-emerald-600"></i>스프레드시트 바로가기</h4>
-                <p class="text-xs text-slate-500 mb-5">영상을 추가하거나 수정하려면 연동된 구글 스프레드시트를 직접 편집하시면 됩니다.</p>
-                
-                <a href="https://docs.google.com/spreadsheets" target="_blank" class="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm py-2.5 px-6 rounded-xl shadow-sm transition">
-                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                    <span>구글 스프레드시트 열기</span>
-                </a>
+            <div id="adminPanel" class="hidden mt-4 premium-card p-6 rounded-2xl">
+                <input type="text" id="adminCode" placeholder="코드" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                <input type="text" id="adminUrl" placeholder="드라이브 주소" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                <button onclick="uploadVideo()" class="w-full bg-slate-800 text-white py-2 rounded-lg text-sm font-medium">등록하기</button>
             </div>
         </div>
-
     </main>
 
-    <!-- 🔒 운영자 비밀번호 입력 모달창 -->
-    <div id="passwordModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xl max-w-sm w-full mx-4">
-            <h3 class="text-lg font-bold text-slate-900 mb-1"><i class="fa-solid fa-lock text-slate-700 mr-2"></i>운영자 인증</h3>
-            <p class="text-xs text-slate-500 mb-4">도구를 사용하려면 비밀번호 숫자 4자리를 입력하세요.</p>
-            <div class="space-y-4">
-                <input type="password" id="passwordInput" maxlength="4" placeholder="••••" 
-                       class="w-full text-center bg-slate-50 border border-slate-200 rounded-xl py-3 text-2xl tracking-widest text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500"
-                       onkeyup="handlePasswordKeyUp(event)">
-                <div class="flex gap-2">
-                    <button onclick="closePasswordModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-sm rounded-xl transition">
-                        취소
-                    </button>
-                    <button onclick="verifyPassword()" class="w-1/2 py-2.5 bg-slate-700 hover:bg-slate-800 text-white font-medium text-sm rounded-xl transition shadow-sm">
-                        인증하기
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div id="customToast" class="hidden fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl z-50"></div>
 
-    <!-- 커스텀 토스트 알림창 -->
-    <div id="customToast" class="hidden fixed bottom-6 right-6 bg-slate-950 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center space-x-3 z-50 toast-animate border border-slate-800">
-        <div class="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-xs">
-            <i class="fa-solid fa-check"></i>
-        </div>
-        <span id="toastMessage" class="text-sm font-medium">알림 메시지</span>
-    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    <!-- 링크 복사용 보이지 않는 임시 입력란 -->
-    <input type="text" id="fallbackCopyInput" class="absolute -top-40 left-0 opacity-0 pointer-events-none">
-
-    <script>
-        // ==========================================
-        // 📊 [구글 스프레드시트 웹 게시 CSV 링크]
-        // ==========================================
-        const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_O1SsCWx0Q840uPbKUj6_t8wdfqN3devs-u1e5cRoQ-TBDbiOvx61SkOFIaPDXRiBRDbTT7VsTUkd/pub?output=csv";
-
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kuma-artgrid';
+        let db = null;
         let activeVideos = [];
-        let isAdminUnlocked = false; // 어드민 잠금 해제 여부
+        let isAdmin = false;
 
-        // 1. 스프레드시트 CSV 데이터를 가져오고 파싱하는 함수
-        async function fetchSpreadsheetData() {
-            try {
-                const response = await fetch(GOOGLE_SHEETS_CSV_URL);
-                if (!response.ok) throw new Error("스프레드시트 파일을 가져오지 못했습니다.");
+        const LOCAL_STORAGE_KEY = "kuma_artgrid_data";
+
+        const init = async () => {
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                const app = initializeApp(JSON.parse(__firebase_config));
+                const auth = getAuth(app);
+                db = getFirestore(app);
                 
-                const csvText = await response.text();
-                activeVideos = parseCSV(csvText);
-                
-                renderVideos();
-                updateStats();
-            } catch (err) {
-                console.error("데이터 로드 오류:", err);
-                showToast("스프레드시트 동기화 실패. 주소 또는 공개 설정을 확인하세요.");
-                
-                const container = document.getElementById('videoListContainer');
-                if (container) {
-                    container.innerHTML = `
-                        <div class="text-center py-12 text-slate-500 text-sm">
-                            <i class="fa-solid fa-triangle-exclamation text-3xl text-amber-500 mb-3"></i>
-                            <p>실시간 데이터를 불러올 수 없습니다.</p>
-                            <p class="text-xs text-slate-400 mt-1">스프레드시트의 '웹에 게시(CSV)' 설정을 확인해 주세요.</p>
-                        </div>
-                    `;
-                }
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+                else await signInAnonymously(auth);
+
+                document.getElementById('syncStatus').innerText = "온라인 동기화 중";
+                const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'videos'));
+                onSnapshot(q, (snapshot) => {
+                    activeVideos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(activeVideos));
+                    render();
+                });
+            } else {
+                activeVideos = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+                document.getElementById('syncStatus').innerText = "오프라인 모드";
+                render();
             }
-        }
+        };
 
-        // CSV 문자열을 객체 배열로 변환하는 경량 파서
-        function parseCSV(csvText) {
-            const lines = [];
-            let row = [""];
-            lines.push(row);
-            let q = false; // 따옴표 랩핑 감지 플래그
-            let r = 0;
-
-            for (let char of csvText) {
-                if (char === '"') {
-                    q = !q;
-                } else if (char === ',' && !q) {
-                    row.push('');
-                    r++;
-                } else if (char === '\n' && !q) {
-                    row = [''];
-                    lines.push(row);
-                    r = 0;
-                } else if (char !== '\r') {
-                    row[r] += char;
-                }
-            }
-
-            if (lines.length === 0) return [];
-
-            // 헤더 분석 (코드, 링크 열 위치 매핑)
-            const headers = lines[0].map(h => h.trim().toLowerCase());
-            let codeIdx = headers.findIndex(h => h.includes('code') || h.includes('코드'));
-            let urlIdx = headers.findIndex(h => h.includes('url') || h.includes('link') || h.includes('링크') || h.includes('주소'));
-
-            // 열을 찾지 못할 경우의 폴백 세팅
-            if (codeIdx === -1) codeIdx = 0;
-            if (urlIdx === -1) urlIdx = 1;
-
-            const result = [];
-            for (let j = 1; j < lines.length; j++) {
-                const currentRow = lines[j];
-                if (currentRow.length <= Math.max(codeIdx, urlIdx)) continue;
-                
-                const code = currentRow[codeIdx]?.trim();
-                const url = currentRow[urlIdx]?.trim();
-                
-                if (code && url) {
-                    result.push({ code, url });
-                }
-            }
-            return result;
-        }
-
-        // ==========================================
-        // ⚙️ UI 렌더링 및 인터랙션 로직
-        // ==========================================
-
-        function renderVideos(filterText = "") {
+        const render = (filter = "") => {
             const container = document.getElementById('videoListContainer');
             const noData = document.getElementById('noDataMessage');
-            
-            if (!container) return;
             container.innerHTML = "";
             
-            // 🛡️ [내림차순 정렬] 코드를 기준으로 완벽하게 최신순(내림차순) 자동 정렬
-            activeVideos.sort((a, b) => {
-                const codeA = String(a.code || '').trim();
-                const codeB = String(b.code || '').trim();
-                return codeB.localeCompare(codeA, undefined, {numeric: true, sensitivity: 'base'});
-            });
-            
-            const filtered = activeVideos.filter(video => 
-                String(video.code || '').toLowerCase().includes(filterText.toLowerCase())
-            );
+            const filtered = activeVideos.filter(v => v.code.includes(filter));
+            filtered.sort((a, b) => b.code.localeCompare(a.code, undefined, {numeric: true}));
 
-            if (filtered.length === 0) {
-                noData.classList.remove('hidden');
-                return;
-            } else {
-                noData.classList.add('hidden');
-            }
+            if(filtered.length === 0) noData.classList.remove('hidden');
+            else noData.classList.add('hidden');
 
-            filtered.forEach(video => {
-                const directUrl = convertToDirectDownload(video.url);
-                const card = document.createElement('div');
-                card.className = "premium-card p-5 rounded-2xl flex items-center justify-between glow-effect transition-all duration-300";
-
-                card.innerHTML = `
-                    <div class="flex items-center space-x-4">
-                        <div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-700 text-lg border border-slate-100">
-                            <i class="fa-solid fa-file-video"></i>
-                        </div>
-                        <div>
-                            <h4 class="text-slate-900 font-bold text-lg tracking-wide">${video.code}</h4>
-                            <p class="text-xs text-slate-500 mt-0.5 font-medium">구글 드라이브 동기화 완료</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <button onclick="copyToClipboard('${directUrl}')" class="p-3 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 rounded-xl transition border border-slate-200 shadow-sm" title="직접 링크 복사">
-                            <i class="fa-solid fa-link text-sm"></i>
-                        </button>
-                        <a href="${directUrl}" target="_blank" class="px-5 py-3 bg-slate-700 hover:bg-slate-800 text-white font-medium rounded-xl flex items-center space-x-2 shadow-md shadow-slate-700/10 transition duration-200">
-                            <i class="fa-solid fa-circle-arrow-down"></i>
-                            <span>다운로드</span>
-                        </a>
+            filtered.forEach(v => {
+                const div = document.createElement('div');
+                div.className = "premium-card p-4 rounded-2xl flex justify-between items-center";
+                div.innerHTML = `
+                    <div><h4 class="font-bold">${v.code}</h4></div>
+                    <div class="flex gap-2">
+                        ${isAdmin ? `<button onclick="deleteVideo('${v.id}')" class="text-red-400 px-3"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        <a href="${v.url.includes('drive') ? v.url.replace('/view?', '/uc?export=download&') : v.url}" target="_blank" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm">다운로드</a>
                     </div>
                 `;
-                container.appendChild(card);
+                container.appendChild(div);
             });
-        }
+            document.getElementById('totalCount').innerText = activeVideos.length + "개";
+            document.getElementById('latestCode').innerText = activeVideos[0]?.code || '-';
+        };
 
-        const updateStats = () => {
-            const totalCountEl = document.getElementById('totalCount');
-            const latestCodeEl = document.getElementById('latestCode');
-            if (totalCountEl) {
-                totalCountEl.innerText = `${activeVideos.length}개`;
+        window.uploadVideo = async () => {
+            const code = document.getElementById('adminCode').value;
+            const url = document.getElementById('adminUrl').value;
+            if(db) {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'videos'), { code, url });
+            } else {
+                activeVideos.push({ id: Date.now().toString(), code, url });
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(activeVideos));
+                render();
             }
-            if (latestCodeEl) {
-                latestCodeEl.innerText = activeVideos.length > 0 ? activeVideos[0].code : '-';
+            showToast("등록 완료!");
+        };
+
+        window.deleteVideo = async (id) => {
+            if(db) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'videos', id));
+            else {
+                activeVideos = activeVideos.filter(v => v.id !== id);
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(activeVideos));
+                render();
             }
         };
 
-        // 구글 드라이브 공유 링크를 즉시 다운로드용 Direct URL로 치환
-        function convertToDirectDownload(inputUrl) {
-            if (!inputUrl) return '#';
-            if (inputUrl.includes('drive.google.com/uc')) return inputUrl;
-
-            const fileDMatch = inputUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-            if (fileDMatch && fileDMatch[1]) {
-                return `https://drive.google.com/uc?export=download&id=${fileDMatch[1]}`;
-            }
-
-            const idParamMatch = inputUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-            if (idParamMatch && idParamMatch[1]) {
-                return `https://drive.google.com/uc?export=download&id=${idParamMatch[1]}`;
-            }
-
-            return inputUrl;
-        }
-
-        function showToast(message) {
-            const toast = document.getElementById('customToast');
-            const toastMsg = document.getElementById('toastMessage');
-            if (toast && toastMsg) {
-                toastMsg.innerText = message;
-                toast.classList.remove('hidden');
-                setTimeout(() => {
-                    toast.classList.add('hidden');
-                }, 3000);
-            }
-        }
-
-        window.copyToClipboard = (text) => {
-            const tempInput = document.getElementById('fallbackCopyInput');
-            if (!tempInput) return;
-            tempInput.value = text;
-            tempInput.select();
-            tempInput.setSelectionRange(0, 99999);
-
-            try {
-                const success = document.execCommand('copy');
-                if (success) {
-                    showToast("다운로드 링크가 클립보드에 복사되었습니다!");
-                } else {
-                    throw new Error();
-                }
-            } catch (err) {
-                navigator.clipboard.writeText(text).then(() => {
-                    showToast("다운로드 링크가 클립보드에 복사되었습니다!");
-                }).catch(e => {
-                    showToast("복사에 실패했습니다. 직접 복사해주세요.");
-                });
-            }
-        };
-
-        // ==========================================
-        // 🔐 운영자 모달 제어 및 비밀번호 통과 연계
-        // ==========================================
         window.toggleAdminPanel = () => {
-            const panel = document.getElementById('adminPanel');
-            const chevron = document.getElementById('adminChevron');
-            if (!panel) return;
-            
-            if (!panel.classList.contains('hidden')) {
-                panel.classList.add('hidden');
-                if (chevron) chevron.classList.remove('rotate-180');
-                return;
-            }
-
-            if (isAdminUnlocked) {
-                panel.classList.remove('hidden');
-                if (chevron) chevron.classList.add('rotate-180');
+            if(!isAdmin) {
+                const pass = prompt("비밀번호(1213)");
+                if(pass === '1213') { isAdmin = true; render(); document.getElementById('adminPanel').classList.remove('hidden'); }
             } else {
-                window.openPasswordModal();
+                document.getElementById('adminPanel').classList.toggle('hidden');
             }
         };
 
-        window.openPasswordModal = () => {
-            const modal = document.getElementById('passwordModal');
-            const input = document.getElementById('passwordInput');
-            if (modal) modal.classList.remove('hidden');
-            if (input) {
-                input.value = "";
-                input.focus();
-            }
-        };
-
-        window.closePasswordModal = () => {
-            const modal = document.getElementById('passwordModal');
-            if (modal) modal.classList.add('hidden');
-        };
-
-        window.handlePasswordKeyUp = (event) => {
-            if (event.key === 'Enter') {
-                window.verifyPassword();
-            }
-        };
-
-        window.verifyPassword = () => {
-            const input = document.getElementById('passwordInput');
-            if (!input) return;
-
-            const val = input.value.trim();
-            if (val === '1213') {
-                isAdminUnlocked = true;
-                window.closePasswordModal();
-                showToast("운영자 권한이 승인되었습니다.");
-                
-                const panel = document.getElementById('adminPanel');
-                const chevron = document.getElementById('adminChevron');
-                if (panel) panel.classList.remove('hidden');
-                if (chevron) chevron.classList.add('rotate-180');
-                
-                renderVideos();
-            } else {
-                showToast("비밀번호가 올바르지 않습니다.");
-                input.value = "";
-                input.focus();
-            }
-        };
-
-        // 실시간 검색 기능 연계
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                window.renderVideos(e.target.value);
-            });
+        function showToast(msg) {
+            const t = document.getElementById('customToast');
+            t.innerText = msg; t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 2000);
         }
 
-        window.clearSearch = () => {
-            if (searchInput) searchInput.value = "";
-            window.renderVideos();
-        };
-
-        // 초기 시스템 기동
-        fetchSpreadsheetData();
+        document.getElementById('searchInput').oninput = (e) => render(e.target.value);
+        init();
     </script>
 </body>
 </html>
